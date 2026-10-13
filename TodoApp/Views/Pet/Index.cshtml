@@ -1,0 +1,187 @@
+@model PetPageViewModel
+@{
+    ViewData["Title"] = "Pets";
+    var d = Model.Player;
+    var capacity = PetLogic.CoopCapacity(d);
+    var slots = PetLogic.IncubatorSlots(d);
+}
+
+<div class="page-head">
+    <div>
+        <h1>🐾 Pet farm</h1>
+        <p>Incubate eggs, build your coop and raise pets that grow with you.</p>
+    </div>
+    <div class="gold-chip">🪙 @d.Gold.ToString("N0")</div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="g-card struct-card">
+            <div class="d-flex align-items-center gap-3">
+                <span class="big">🏠</span>
+                <div><h2 class="mb-0">Pet coop · Level @d.CoopLevel</h2><small class="muted">Holds @d.Pets.Count / @capacity pets</small></div>
+            </div>
+            @if (d.CoopLevel >= PetLogic.MaxCoopLevel)
+            {
+                <button class="btn-small" disabled>Max level reached</button>
+            }
+            else
+            {
+                <form asp-action="UpgradeCoop" method="post">
+                    <button type="submit" class="btn-buy w-100" disabled="@(d.Gold < PetLogic.CoopUpgradeCost(d))">
+                        Upgrade (+2 slots) · 🪙 @PetLogic.CoopUpgradeCost(d).ToString("N0")
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="g-card struct-card">
+            <div class="d-flex align-items-center gap-3">
+                <span class="big">🔥</span>
+                <div><h2 class="mb-0">Incubator · Level @d.IncubatorLevel</h2><small class="muted">Incubating @d.IncubatingEggs.Count / @slots eggs</small></div>
+            </div>
+            @if (d.IncubatorLevel >= PetLogic.MaxIncubatorLevel)
+            {
+                <button class="btn-small" disabled>Max level reached</button>
+            }
+            else
+            {
+                <form asp-action="UpgradeIncubator" method="post">
+                    <button type="submit" class="btn-buy w-100" disabled="@(d.Gold < PetLogic.IncubatorUpgradeCost(d))">
+                        Upgrade (+1 slot) · 🪙 @PetLogic.IncubatorUpgradeCost(d).ToString("N0")
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-7">
+        <div class="g-card">
+            <h2>🥚 Incubating</h2>
+            @if (d.IncubatingEggs.Count == 0)
+            {
+                <div class="muted">The incubator is empty. Put an egg in to get started!</div>
+            }
+            @foreach (var egg in d.IncubatingEggs)
+            {
+                var item = ItemCatalog.Find(egg.EggItemId)!;
+                var ready = egg.ReadyAt <= Model.NowUtc;
+                var total = (egg.ReadyAt - egg.StartedAt).TotalSeconds;
+                var pct = ready ? 100 : (int)Math.Clamp((Model.NowUtc - egg.StartedAt).TotalSeconds * 100 / total, 0, 100);
+                <div class="egg-row">
+                    <span class="e-emoji">@item.Emoji</span>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">@item.Name <span class="rar-tag @item.Rarity.Css()">@item.Rarity.Label()</span></div>
+                        <div class="mini-bar"><div style="width:@(pct)%"></div></div>
+                        @if (ready)
+                        {
+                            <small style="color:var(--c-clean)">Ready to hatch!</small>
+                        }
+                        else
+                        {
+                            <small class="muted"><span class="countdown" data-ready="@egg.ReadyAt.ToString("o")">…</span> left</small>
+                        }
+                    </div>
+                    @if (ready)
+                    {
+                        <form asp-action="Hatch" method="post">
+                            <input type="hidden" name="id" value="@egg.Id" />
+                            <button type="submit" class="btn-buy">🐣 Hatch!</button>
+                        </form>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="g-card">
+            <h2>🎒 Eggs in your bag</h2>
+            @if (Model.Eggs.Count == 0)
+            {
+                <div class="muted mb-2">You have no eggs.</div>
+                <a class="btn-small" asp-controller="Shop" asp-action="Index" asp-route-category="pet">🛒 Buy eggs</a>
+            }
+            @foreach (var e in Model.Eggs)
+            {
+                <div class="egg-row">
+                    <span class="e-emoji" style="animation:none">@e.Item.Emoji</span>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">@e.Item.Name x@e.Qty</div>
+                        <small class="muted">Incubates @(PetCatalog.Eggs[e.Item.Id].Minutes >= 60 ? $"{PetCatalog.Eggs[e.Item.Id].Minutes / 60} h" : $"{PetCatalog.Eggs[e.Item.Id].Minutes} min")</small>
+                    </div>
+                    <form asp-action="Incubate" method="post">
+                        <input type="hidden" name="eggId" value="@e.Item.Id" />
+                        <button type="submit" class="btn-small" disabled="@(d.IncubatingEggs.Count >= slots)">Incubate</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<h2 class="section-title">🐾 Your pets</h2>
+@if (d.Pets.Count == 0)
+{
+    <div class="g-card muted">No pets yet. Incubate an egg!</div>
+}
+else
+{
+    <div class="pet-grid">
+        @foreach (var pet in d.Pets)
+        {
+            var sp = PetCatalog.Get(pet.SpeciesId);
+            var isMax = pet.Level >= PetLogic.MaxPetLevel;
+            var pct = isMax ? 100 : pet.Xp * 100 / PetLogic.XpToNext(pet);
+            <div class="pet-card @sp.Rarity.Css() @(pet.Id == d.CompanionPetId ? "companion" : "")">
+                <div class="pet-emoji">@sp.Emoji</div>
+                <div class="fw-bold">@pet.Name</div>
+                <span class="rar-tag">@sp.Rarity.Label()</span>
+                <div class="mt-2 small">Level @pet.Level@(isMax ? " (MAX)" : "")</div>
+                <div class="mini-bar"><div style="width:@(pct)%"></div></div>
+                @if (!isMax) { <small class="muted">@pet.Xp / @PetLogic.XpToNext(pet) XP</small> }
+                <div class="d-flex gap-2 justify-content-center mt-2">
+                    <form asp-action="Feed" method="post">
+                        <input type="hidden" name="id" value="@pet.Id" />
+                        <button type="submit" class="btn-small" disabled="@(isMax || d.Gold < PetLogic.FeedCost)">🍖 Feed (@PetLogic.FeedCost 🪙)</button>
+                    </form>
+                    @if (pet.Id == d.CompanionPetId)
+                    {
+                        <button class="btn-small" disabled>⭐ Companion</button>
+                    }
+                    else
+                    {
+                        <form asp-action="Companion" method="post">
+                            <input type="hidden" name="id" value="@pet.Id" />
+                            <button type="submit" class="btn-small">Choose</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+    (function () {
+        const els = document.querySelectorAll('.countdown');
+        if (!els.length) return;
+        function fmt(s) {
+            const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+            return (h ? h + ' h ' : '') + (h || m ? m + ' min ' : '') + sec + ' s';
+        }
+        function tick() {
+            let done = false;
+            els.forEach(el => {
+                const s = Math.floor((new Date(el.dataset.ready).getTime() - Date.now()) / 1000);
+                if (s <= 0) done = true; else el.textContent = fmt(s);
+            });
+            if (done) location.reload();
+        }
+        tick(); setInterval(tick, 1000);
+    })();
+</script>
+}

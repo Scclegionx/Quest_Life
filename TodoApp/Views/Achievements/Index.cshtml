@@ -1,0 +1,79 @@
+@model AchievementsViewModel
+@{
+    ViewData["Title"] = "Achievements";
+    var d = Model.Player;
+    var claimedCount = Model.Items.Count(a => a.Claimed);
+}
+
+<div class="page-head">
+    <div>
+        <h1>🎖️ Achievements</h1>
+        <p>@claimedCount / @Model.Items.Count claimed · Displayed title:
+            <strong style="color:var(--gold)">@(Model.ActiveTitleName ?? "none")</strong></p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        @if (d.ActiveTitleId is not null)
+        {
+            <form asp-action="SetTitle" method="post"><button type="submit" class="btn-small">Remove title</button></form>
+        }
+        <div class="gold-chip">🪙 @d.Gold.ToString("N0")</div>
+    </div>
+</div>
+
+@if (Model.OwnedTitles.Count > 0)
+{
+    <div class="g-card mb-4">
+        <h2>🏷️ Your titles</h2>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var t in Model.OwnedTitles)
+            {
+                <form asp-action="SetTitle" method="post" class="m-0">
+                    <input type="hidden" name="id" value="@t.Id" />
+                    <button type="submit" class="btn-small" disabled="@(d.ActiveTitleId == t.Id)">@t.Icon @t.Name@(d.ActiveTitleId == t.Id ? " ✓" : "")</button>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+<div class="ach-grid">
+    @foreach (var a in Model.Items)
+    {
+        var def = a.Def;
+        <div class="g-card ach-card @(a.Completed && !a.Claimed ? "done" : "") @(a.Claimed ? "claimed" : "")">
+            <div class="ach-top">
+                <span class="a-icon">@def.Icon</span>
+                <div><strong>@def.Name</strong><small>@def.Description</small></div>
+            </div>
+            <div>
+                <div class="d-flex justify-content-between small"><span class="muted">@a.Current / @def.Target</span><span class="reward-chip">+@def.RewardGold 🪙</span></div>
+                <div class="mini-bar"><div style="width:@(a.Percent)%"></div></div>
+            </div>
+            @if (a.Claimed)
+            {
+                @if (d.ActiveTitleId == def.TitleId)
+                {
+                    <button class="btn-small" disabled>✓ In use</button>
+                }
+                else
+                {
+                    <form asp-action="SetTitle" method="post">
+                        <input type="hidden" name="id" value="@def.TitleId" />
+                        <button type="submit" class="btn-small w-100">Use as title</button>
+                    </form>
+                }
+            }
+            else if (a.Completed)
+            {
+                <form asp-action="Claim" method="post">
+                    <input type="hidden" name="id" value="@def.Id" />
+                    <button type="submit" class="btn-buy w-100">🎁 Claim reward</button>
+                </form>
+            }
+            else
+            {
+                <button class="btn-small" disabled>Not completed</button>
+            }
+        </div>
+    }
+</div>

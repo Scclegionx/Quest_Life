@@ -1,0 +1,72 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = "Leaderboards";
+    var authed = User.Identity?.IsAuthenticated == true;
+    string Medal(int rank) => rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => rank.ToString() };
+    string MedalClass(int rank) => rank switch { 1 => "gold", 2 => "silver", 3 => "bronze", _ => "" };
+}
+
+<section class="hero">
+    <h1>Turn your life into<br />a game</h1>
+    <p>Study, exercise, skip the snacks, break bad habits. Every effort earns experience. Climb to the top of the leaderboards!</p>
+    <div class="period-switch">
+        <a asp-action="Index" asp-route-period="week" class="@(Model.Period == "week" ? "active" : "")">⚡ This week</a>
+        <a asp-action="Index" asp-route-period="all" class="@(Model.Period == "all" ? "active" : "")">👑 All time</a>
+    </div>
+</section>
+
+<div class="row g-4">
+    @foreach (var board in Model.Boards)
+    {
+        var info = board.Info;
+        <div class="col-xl-4 col-md-6">
+            <div class="g-card board cat-@info.Slug">
+                <div class="board-head">
+                    <div class="board-icon">@info.Emoji</div>
+                    <div>
+                        <h3>@info.BoardName</h3>
+                        <small>@info.Name · measured in @info.Unit</small>
+                    </div>
+                </div>
+
+                @if (board.Rows.Count == 0)
+                {
+                    <div class="empty-board">Nobody is on this board yet.<br />Be the first! 🚀</div>
+                }
+                else
+                {
+                    <ol class="rank-list">
+                        @foreach (var row in board.Rows)
+                        {
+                            <li class="rank-row @(row.IsMe ? "me" : "")">
+                                <span class="rank-pos @MedalClass(row.Rank)">@Medal(row.Rank)</span>
+                                <span class="avatar">@row.Username[0].ToString().ToUpper()</span>
+                                <a class="rank-name" asp-controller="Profile" asp-action="Index" asp-route-username="@row.Username">@row.Username@(row.IsMe ? " (you)" : "")</a>
+                                <span class="rank-value">@row.Total.Num() <small>@info.Unit</small></span>
+                            </li>
+                        }
+                    </ol>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="col-xl-4 col-md-6">
+        <div class="g-card cta-card">
+            <div style="font-size:2.5rem">🚀</div>
+            @if (authed)
+            {
+                <h3>Ready to climb?</h3>
+                <p class="muted mb-2">Complete tasks today to move up the leaderboards.</p>
+                <a class="btn btn-game" asp-controller="Dashboard" asp-action="Index">Open dashboard</a>
+            }
+            else
+            {
+                <h3>Join the race</h3>
+                <p class="muted mb-2">Create a character, complete tasks and get your name on the board.</p>
+                <a class="btn btn-game" asp-controller="Account" asp-action="Register">Create character</a>
+                <a class="btn btn-ghost btn-sm" asp-controller="Account" asp-action="Login">Already have an account? Log in</a>
+            }
+        </div>
+    </div>
+</div>

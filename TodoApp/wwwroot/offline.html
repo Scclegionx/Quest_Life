@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0e1f" />
+    <title>Offline - QuestLife</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 1.5rem;
+               font-family: "Segoe UI", system-ui, sans-serif; color: #e9edff;
+               background: radial-gradient(900px 500px at 10% -10%, rgba(124,92,255,.3), transparent 60%), #0a0e1f; }
+        .card { max-width: 380px; padding: 2rem 1.5rem; border-radius: 22px; border: 1px solid #2a3566; background: #131a35; }
+        .emoji { font-size: 3.5rem; }
+        h1 { margin: .6rem 0 .4rem; font-size: 1.5rem; }
+        p { color: #8f9bc7; line-height: 1.5; }
+        button { margin-top: 1rem; border: 0; border-radius: 12px; padding: .8rem 1.6rem; font-size: 1rem; font-weight: 700; color: #fff;
+                 background: linear-gradient(135deg, #7c5cff, #00d4ff); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="emoji">🛰️</div>
+        <h1>You're offline</h1>
+        <p>QuestLife needs an internet connection to load your quests and character. Check your connection and try again.</p>
+        <button type="button" onclick="location.reload()">Try again</button>
+    </div>
+</body>
+</html>

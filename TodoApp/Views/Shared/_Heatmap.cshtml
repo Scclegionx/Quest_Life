@@ -1,0 +1,27 @@
+@model TodoApp.Services.ActivityCharts
+@using System.Globalization
+@{
+    var ci = CultureInfo.InvariantCulture;
+    var max = Model.HeatCounts.Length == 0 ? 0 : Model.HeatCounts.Max();
+    int Level(int n) => n == 0 ? 0 : max <= 1 ? 4 : (int)Math.Ceiling(n * 4.0 / max);
+}
+<div class="heatmap-scroll">
+<div class="heatmap" style="--weeks:@Model.HeatWeeks">
+    @for (var i = 0; i < Model.HeatCounts.Length; i++)
+    {
+        var date = Model.HeatStart.AddDays(i);
+        var n = Model.HeatCounts[i];
+        if (date > Model.Today)
+        {
+            <span class="hm hm-future"></span>
+        }
+        else
+        {
+            <span class="hm hm-@Level(n)" title="@date.ToString("ddd, MMM d", ci): @n @(n == 1 ? "task" : "tasks") completed"></span>
+        }
+    }
+</div>
+</div>
+<div class="heatmap-legend">
+    <span>Less</span><span class="hm hm-0"></span><span class="hm hm-1"></span><span class="hm hm-2"></span><span class="hm hm-3"></span><span class="hm hm-4"></span><span>More</span>
+</div>

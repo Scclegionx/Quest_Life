@@ -1,0 +1,36 @@
+@model SettingsViewModel
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="auth-card g-card">
+    <div class="text-center mb-3">
+        <div style="font-size:2.5rem">⚙️</div>
+        <h2 class="mb-1">Settings</h2>
+        <small class="muted">Your time zone decides when your "new day" starts</small>
+    </div>
+    <form asp-action="Settings" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="mb-3">
+            <label asp-for="TimeZone" class="form-label"></label>
+            <select asp-for="TimeZone" class="form-select">
+                @if (TimeZones.Common.All(z => z.Id != Model.TimeZone))
+                {
+                    <option value="@Model.TimeZone" selected>@Model.TimeZone</option>
+                }
+                @foreach (var (id, label) in TimeZones.Common)
+                {
+                    <option value="@id" selected="@(Model.TimeZone == id)">@label</option>
+                }
+            </select>
+            <span asp-validation-for="TimeZone" class="text-danger"></span>
+            <div class="form-text">
+                Applies to dailies, deadlines, streaks and the daily mana refill. The weekly leaderboards and the raid boss share one
+                fixed boundary (Monday 00:00 Vietnam time) so everyone runs the same race.
+            </div>
+        </div>
+        <button type="submit" class="btn btn-game w-100">Save</button>
+    </form>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,41 @@
+@model PlayersViewModel
+@{
+    ViewData["Title"] = "Players";
+}
+
+<div class="page-head">
+    <div>
+        <h1>🔎 Players</h1>
+        <p>Find a player and take a look at their character.</p>
+    </div>
+</div>
+
+<form method="get" class="search-bar mb-4" role="search">
+    <input type="search" name="q" value="@Model.Query" placeholder="Search by username…" autocomplete="off" autofocus aria-label="Search players" />
+    <button type="submit" class="btn btn-game">Search</button>
+    @if (!Model.IsTopList) { <a class="btn btn-ghost" asp-action="Index">Clear</a> }
+</form>
+
+<h2 class="section-title" style="margin-top:0">@(Model.IsTopList ? "🏅 Top players" : $"Results for “{Model.Query}”")</h2>
+
+@if (Model.Results.Count == 0)
+{
+    <div class="g-card text-center muted">No players found. Check the spelling or try a shorter name.</div>
+}
+else
+{
+    <div class="player-grid">
+        @foreach (var p in Model.Results)
+        {
+            <a class="player-tile" asp-controller="Profile" asp-action="Index" asp-route-username="@p.Username">
+                <span class="avatar">@p.Username[0].ToString().ToUpper()</span>
+                <span>
+                    <strong>@p.Username</strong>
+                    <small><span class="lvl-chip">Lv @p.Level</span>@p.Title</small>
+                    <small>@p.Exp.ToString("N0") EXP · @p.TasksCompleted tasks done</small>
+                    <small>Joined @p.JoinedAt.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</small>
+                </span>
+            </a>
+        }
+    </div>
+}

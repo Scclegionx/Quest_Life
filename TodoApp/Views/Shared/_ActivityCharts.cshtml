@@ -1,0 +1,62 @@
+@model TodoApp.Services.ActivityCharts
+@{
+    string Color(ActivityCategory c) => c switch
+    {
+        ActivityCategory.Study => "#4dabff", ActivityCategory.Gaming => "#b86bff", ActivityCategory.Sport => "#ff8a4c",
+        ActivityCategory.CleanEating => "#3ddc97", _ => "#ff4d6d",
+    };
+    object Series(params ActivityCategory[] cats) => cats.Select(c => new { label = Categories.Get(c).Name, data = Model.PerDay[c], color = Color(c) }).ToArray();
+
+    var hours = new { kind = "stackedBar", labels = Model.Labels, datasets = Series(ActivityCategory.Study, ActivityCategory.Gaming, ActivityCategory.Sport) };
+    var times = new { kind = "stackedBar", labels = Model.Labels, datasets = Series(ActivityCategory.CleanEating, ActivityCategory.BadHabit) };
+    var earned = new
+    {
+        kind = "dualLine", labels = Model.Labels,
+        datasets = new object[]
+        {
+            new { label = "EXP", data = Model.ExpPerDay, color = "#00d4ff", axis = "y" },
+            new { label = "Gold", data = Model.GoldPerDay, color = "#ffd166", axis = "y1" },
+        },
+    };
+    var byType = Model.CompletedByType;
+    var types = new { kind = "doughnut", labels = new[] { "Habits", "Dailies", "To-Dos" },
+        data = new[] { byType.GetValueOrDefault(TaskType.Habit), byType.GetValueOrDefault(TaskType.Daily), byType.GetValueOrDefault(TaskType.Todo) },
+        colors = new[] { "#3ddc97", "#4dabff", "#ffd166" } };
+
+    bool Any(decimal[] a) => a.Any(x => x > 0);
+    var hoursAny = new[] { ActivityCategory.Study, ActivityCategory.Gaming, ActivityCategory.Sport }.Any(c => Any(Model.PerDay[c]));
+    var timesAny = new[] { ActivityCategory.CleanEating, ActivityCategory.BadHabit }.Any(c => Any(Model.PerDay[c]));
+    var earnedAny = Model.ExpPerDay.Any(x => x != 0) || Model.GoldPerDay.Any(x => x != 0);
+    var typesAny = byType.Values.Sum() > 0;
+}
+
+<div class="row g-4 chart-scroller">
+    <div class="col-xl-3 col-md-6">
+        <div class="g-card chart-card">
+            <h3>⏱️ Hours per day</h3><div class="sub">Study, gaming and sports · last 14 days</div>
+            @if (hoursAny) { <div class="chart-box"><canvas data-chart="@ChartJson.Serialize(hours)"></canvas></div> }
+            else { <div class="chart-empty">No hours logged yet.<br />Complete a to-do with a category to see it here.</div> }
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="g-card chart-card">
+            <h3>🛡️ Times per day</h3><div class="sub">Junk food skipped and bad habits resisted</div>
+            @if (timesAny) { <div class="chart-box"><canvas data-chart="@ChartJson.Serialize(times)"></canvas></div> }
+            else { <div class="chart-empty">Nothing logged in the last 14 days.</div> }
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="g-card chart-card">
+            <h3>✨ EXP &amp; gold earned</h3><div class="sub">From completed tasks · last 14 days</div>
+            @if (earnedAny) { <div class="chart-box"><canvas data-chart="@ChartJson.Serialize(earned)"></canvas></div> }
+            else { <div class="chart-empty">Complete tasks to earn EXP and gold.</div> }
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="g-card chart-card">
+            <h3>🎯 Tasks by type</h3><div class="sub">Completed in the last 30 days</div>
+            @if (typesAny) { <div class="chart-box"><canvas data-chart="@ChartJson.Serialize(types)"></canvas></div> }
+            else { <div class="chart-empty">No completed tasks in the last 30 days.</div> }
+        </div>
+    </div>
+</div>

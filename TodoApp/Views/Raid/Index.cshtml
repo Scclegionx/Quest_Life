@@ -1,0 +1,132 @@
+@using TodoApp.Data
+@model RaidPageViewModel
+@{
+    ViewData["Title"] = "Raid Boss";
+    var status = Model.Status;
+    var authed = Model.Authed;
+    var boss = status.Boss;
+}
+
+<section class="boss-hero mt-4 @(status.Defeated ? "defeated" : "")">
+    <div class="muted fw-bold">⚔️ RAID WEEK @status.WeekNumber</div>
+    <div class="boss-emoji">@boss.Emoji</div>
+    <h1>@boss.Name</h1>
+    <div class="muted">@boss.Title</div>
+    <p class="muted mt-2 mb-0 mx-auto" style="max-width:560px">@boss.Lore</p>
+
+    <div class="hp-wrap">
+        <div class="hp-bar" role="progressbar" aria-valuenow="@status.HpPercent" aria-valuemin="0" aria-valuemax="100">
+            <div class="hp-fill" style="width:@(status.HpPercent)%"></div>
+        </div>
+        <div class="hp-text">❤️ @status.Hp.ToString("N0") / @status.MaxHp.ToString("N0") HP</div>
+    </div>
+
+    @if (status.Defeated)
+    {
+        <div class="victory">🎉 The whole community defeated @boss.Name! A new boss arrives next week.</div>
+    }
+    else
+    {
+        <div class="muted mt-3">⏳ The boss leaves in <strong id="raid-countdown" data-end="@status.EndsUtc.ToString("o")">…</strong></div>
+    }
+</section>
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-7">
+        <div class="g-card">
+            <h2>🗡️ Top warriors</h2>
+            @if (status.Top.Count == 0)
+            {
+                <div class="empty-board">Nobody has struck yet. Be the first! 🚀</div>
+            }
+            else
+            {
+                <ol class="rank-list">
+                    @foreach (var a in status.Top)
+                    {
+                        <li class="rank-row cat-habit @(a.IsMe ? "me" : "")">
+                            <span class="rank-pos @(a.Rank == 1 ? "gold" : a.Rank == 2 ? "silver" : a.Rank == 3 ? "bronze" : "")">@(a.Rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => a.Rank.ToString() })</span>
+                            <span class="avatar">@a.Username[0].ToString().ToUpper()</span>
+                            <a class="rank-name" asp-controller="Profile" asp-action="Index" asp-route-username="@a.Username">@a.Username@(a.IsMe ? " (you)" : "")</a>
+                            <span class="rank-value">@a.Damage.ToString("N0") <small>damage</small></span>
+                        </li>
+                    }
+                </ol>
+            }
+        </div>
+    </div>
+    <div class="col-lg-5 d-flex flex-column gap-4">
+        <div class="g-card">
+            <h2>📊 Campaign</h2>
+            <div class="d-flex justify-content-between"><span class="muted">Total damage</span><strong>@status.TotalDamage.ToString("N0")</strong></div>
+            <div class="d-flex justify-content-between"><span class="muted">Warriors</span><strong>@status.AttackerCount</strong></div>
+            @if (authed)
+            {
+                <div class="d-flex justify-content-between"><span class="muted">Your damage</span><strong style="color:var(--gold)">@status.MyDamage.ToString("N0")@(status.MyRank is { } r ? $" (rank {r})" : "")</strong></div>
+            }
+            <hr style="border-color:var(--line)" />
+            <p class="muted small mb-2">How to attack: join the raid, then every task you complete damages the boss. Damage depends on difficulty, effort (hours/times) and your ATK and INT stats (raise them with gear from the shop).</p>
+            @if (authed && status.Joined)
+            {
+                <div class="victory" style="background:linear-gradient(135deg,var(--c-clean),var(--brand-2));color:#04140d;margin:0 0 .6rem">✅ You joined this week's raid</div>
+                <a class="btn btn-game w-100" asp-controller="Dashboard" asp-action="Index">⚔️ Complete tasks to strike</a>
+            }
+            else if (authed && !status.Defeated)
+            {
+                <form asp-action="Join" method="post"><button type="submit" class="btn btn-game w-100">⚔️ Join this week's raid</button></form>
+            }
+            else if (authed)
+            {
+                <a class="btn btn-game w-100" asp-controller="Dashboard" asp-action="Index">Back to dashboard</a>
+            }
+            else
+            {
+                <a class="btn btn-game w-100" asp-controller="Account" asp-action="Register">Create a character to join</a>
+            }
+        </div>
+        <div class="g-card">
+            <h2>🎁 Boss rewards</h2>
+            <ul class="reward-list">
+                @foreach (var r in boss.Rewards)
+                {
+                    <li>
+                        @switch (r.Kind)
+                        {
+                            case RewardKind.Gold: <span>🪙 @r.Gold gold</span> break;
+                            case RewardKind.Item when ItemCatalog.Find(r.ItemId) is { } it: <span>@it.Emoji @it.Name x@r.Quantity</span> break;
+                            case RewardKind.Pet when r.PetSpeciesId is not null && PetCatalog.Species.FirstOrDefault(p => p.Id == r.PetSpeciesId) is { } pet: <span>@pet.Emoji Pet: @pet.Name</span> break;
+                            case RewardKind.Title when r.TitleId is not null && GameCatalog.Current.Titles.TryGetValue(r.TitleId, out var title): <span>@title.Icon Title: “@title.Name”</span> break;
+                        }
+                    </li>
+                }
+                @if (boss.Rewards.Count == 0) { <li class="muted">No rewards set.</li> }
+            </ul>
+            <div class="muted small">Everyone who dealt damage receives them once the boss is defeated.</div>
+            @foreach (var c in status.Claimable)
+            {
+                <form asp-action="Claim" method="post" class="mt-2">
+                    <input type="hidden" name="raidId" value="@c.RaidId" />
+                    <button type="submit" class="btn-buy w-100">🎁 Claim: @c.Boss.Emoji @c.Boss.Name</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    (function () {
+        const el = document.getElementById('raid-countdown');
+        if (!el) return;
+        const end = new Date(el.dataset.end).getTime();
+        function tick() {
+            let s = Math.max(0, Math.floor((end - Date.now()) / 1000));
+            const d = Math.floor(s / 86400); s %= 86400;
+            const h = Math.floor(s / 3600); s %= 3600;
+            const m = Math.floor(s / 60);
+            el.textContent = (d ? d + ' d ' : '') + h + ' h ' + m + ' min';
+        }
+        tick(); setInterval(tick, 30000);
+    })();
+</script>
+}

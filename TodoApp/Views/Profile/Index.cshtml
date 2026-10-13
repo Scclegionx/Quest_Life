@@ -1,0 +1,191 @@
+@model ProfileViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = Model.Username;
+    var t = Model.Total; var g = Model.Gear; var b = Model.Base;
+    int Pct(int v, int max) => max <= 0 ? 0 : Math.Clamp(v * 100 / max, 0, 100);
+    var ci = CultureInfo.InvariantCulture;
+
+    // radar: shape is scaled 0-100, tooltip shows the real values
+    var caps = new[] { 100, 80, 100, 50, 500, 200 };
+    var raw = new[] { t.Atk, t.Def, t.Int, t.Luk, t.MaxHp, t.MaxMana };
+    var radar = new
+    {
+        kind = "radar", title = "Stats", labels = new[] { "ATK", "DEF", "INT", "LUK", "HP", "MP" },
+        data = raw.Select((v, i) => Math.Min(100, v * 100 / caps[i])).ToArray(), raw,
+    };
+    string Medal(int? rank) => rank switch { 1 => "🥇 #1", 2 => "🥈 #2", 3 => "🥉 #3", null => "—", _ => "#" + rank };
+}
+
+<section class="profile-banner mt-4">
+    <div class="profile-avatar">@Model.Username[0].ToString().ToUpper()</div>
+    <div class="profile-id">
+        <h1>@Model.Username @if (Model.IsMe) { <span class="you-chip">YOU</span> }</h1>
+        <span class="title-chip">⚜️ @(Model.ActiveTitle ?? Model.LevelTitle)</span>
+        <div class="profile-meta">
+            <span class="meta-chip">📅 Joined @Model.JoinedAt.ToString("MMM d, yyyy", ci)</span>
+            <span class="meta-chip">🔥 @Model.Streak-day streak</span>
+            <span class="meta-chip">✅ @Model.TasksCompleted tasks completed</span>
+            <span class="meta-chip">🎖️ @Model.Achievements.Count / @Model.AchievementTotal achievements</span>
+            @if (Model.Deaths > 0) { <span class="meta-chip">💀 Fallen @Model.Deaths @(Model.Deaths == 1 ? "time" : "times")</span> }
+        </div>
+        <div class="vital"><span class="vital-label">⭐ EXP</span>
+            <div class="xp-bar"><div class="xp-fill" style="width:@(Model.PercentToNext)%"></div></div>
+            <span class="vital-num">@Model.Exp.ToString("N0") / @Model.NextLevelXp.ToString("N0")</span></div>
+    </div>
+    <div class="level-ring" style="--p:@Model.PercentToNext">
+        <div class="level-ring-inner"><small>LV</small><strong>@Model.Level</strong></div>
+    </div>
+    <div class="profile-actions">
+        @if (Model.IsMe)
+        {
+            <a class="btn btn-game" asp-controller="Dashboard" asp-action="Index">🎯 Dashboard</a>
+            <a class="btn btn-ghost" asp-controller="Account" asp-action="Settings">⚙️ Settings</a>
+        }
+        else
+        {
+            <a class="btn btn-ghost" asp-controller="Players" asp-action="Index">🔎 Find more players</a>
+            <a class="btn btn-ghost" asp-controller="Home" asp-action="Index">🏆 Leaderboards</a>
+        }
+    </div>
+</section>
+
+<div class="row g-4 mt-1">
+    <!-- left: the character -->
+    <div class="col-xl-4">
+        <div class="g-card mb-4">
+            <h2 class="text-center mb-3">🧙 Character</h2>
+            <div class="doll">
+                @foreach (var s in Model.Slots)
+                {
+                    var slotName = s.Slot.ToString().ToLowerInvariant();
+                    if (s.Item is { } it)
+                    {
+                        <div class="slot slot-@slotName filled @it.Rarity.Css()" title="@it.Name (@it.Rarity.Label()) — @ItemStats.Describe(it)">
+                            <span class="s-emoji">@it.Emoji</span><span>@it.Name</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="slot slot-@slotName"><span class="s-empty">@s.Slot.Emoji()</span>@s.Slot.Label()</div>
+                    }
+                }
+                <div class="slot slot-avatar">🧙</div>
+                @if (Model.Companion is { } pet)
+                {
+                    var sp = PetCatalog.Get(pet.SpeciesId);
+                    <div class="slot slot-companion filled @sp.Rarity.Css()" title="@pet.Name (Lv @pet.Level)">
+                        <span class="s-emoji">@sp.Emoji</span><span>@pet.Name</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="slot slot-companion"><span class="s-empty">🐾</span>Companion</div>
+                }
+            </div>
+
+            <div class="mt-4">
+                <div class="vital"><span class="vital-label">❤️ HP</span><div class="xp-bar vital-hp"><div class="xp-fill" style="width:@(Pct(Model.Hp, t.MaxHp))%"></div></div><span class="vital-num">@Model.Hp / @t.MaxHp</span></div>
+                <div class="vital"><span class="vital-label">💧 MP</span><div class="xp-bar vital-mp"><div class="xp-fill" style="width:@(Pct(Model.Mana, t.MaxMana))%"></div></div><span class="vital-num">@Model.Mana / @t.MaxMana</span></div>
+            </div>
+            <table class="stat-table">
+                <tr><td>⚔️ ATK</td><td>@t.Atk</td><td class="bonus">@(g.Atk > 0 ? $"({b.Atk} +{g.Atk})" : "")</td></tr>
+                <tr><td>🔮 INT</td><td>@t.Int</td><td class="bonus">@(g.Int > 0 ? $"({b.Int} +{g.Int})" : "")</td></tr>
+                <tr><td>🛡️ DEF</td><td>@t.Def</td><td class="bonus">@(g.Def > 0 ? $"({b.Def} +{g.Def})" : "")</td></tr>
+                <tr><td>🍀 LUK</td><td>@t.Luk</td><td class="bonus">@(g.Luk > 0 ? $"({b.Luk} +{g.Luk})" : "")</td></tr>
+            </table>
+            <div class="stat-big mt-2"><span class="muted">Gold</span><strong style="color:var(--gold)">🪙 @Model.Gold.ToString("N0")</strong></div>
+        </div>
+
+        <div class="g-card mb-4">
+            <h2>🐾 Pets <span class="muted small">(@Model.Pets.Count)</span></h2>
+            @if (Model.Pets.Count == 0) { <div class="muted">No pets yet.</div> }
+            else
+            {
+                <div class="pet-mini-grid">
+                    @foreach (var p in Model.Pets)
+                    {
+                        var sp = PetCatalog.Get(p.SpeciesId);
+                        <div class="pet-mini @sp.Rarity.Css() @(Model.Companion?.Id == p.Id ? "companion" : "")" title="@sp.Name — @sp.Rarity.Label()">
+                            <div class="p-emoji">@sp.Emoji</div>
+                            <strong class="small">@p.Name</strong>
+                            <small>Lv @p.Level</small>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="g-card">
+            <h2>🏷️ Titles <span class="muted small">(@Model.Titles.Count)</span></h2>
+            @if (Model.Titles.Count == 0) { <div class="muted">No titles earned yet.</div> }
+            else
+            {
+                <div class="title-list">
+                    @foreach (var title in Model.Titles) { <span class="title-pill">@title.Icon @title.Name</span> }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- right: stats and activity -->
+    <div class="col-xl-8">
+        <div class="row g-4 mb-4">
+            <div class="col-lg-5">
+                <div class="g-card chart-card">
+                    <h3>📡 Stat profile</h3><div class="sub">Base stats plus equipment bonuses</div>
+                    <div class="chart-box tall"><canvas data-chart="@ChartJson.Serialize(radar)"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="g-card h-100">
+                    <h2>🏆 Rankings</h2>
+                    <div class="muted small mb-2">This week · all time</div>
+                    <div class="rank-tiles">
+                        @foreach (var card in Model.Cards)
+                        {
+                            <div class="rank-tile cat-@card.Info.Slug">
+                                <div class="t-name">@card.Info.Emoji @card.Info.Name</div>
+                                <div class="t-rank">@Medal(card.WeekRank)</div>
+                                <small>@card.WeekTotal.Num() @card.Info.UnitFor(card.WeekTotal) this week</small>
+                                <small>All time: @Medal(card.AllRank) · @card.AllTotal.Num() @card.Info.UnitFor(card.AllTotal)</small>
+                            </div>
+                        }
+                        <div class="rank-tile cat-habit">
+                            <div class="t-name">🐲 Raid boss</div>
+                            <div class="t-rank">@Medal(Model.RaidRank)</div>
+                            <small>@Model.RaidDamageThisWeek.ToString("N0") damage this week</small>
+                            <small>Career: @Model.RaidDamageCareer.ToString("N0") in @Model.RaidsContributed @(Model.RaidsContributed == 1 ? "raid" : "raids")</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <partial name="_ActivityCharts" model="Model.Charts" />
+
+        <div class="g-card mt-4">
+            <div class="d-flex justify-content-between align-items-baseline flex-wrap">
+                <h2 class="mb-1">🔥 Activity — last @Model.Charts.HeatWeeks weeks</h2>
+                <span class="muted small">@Model.Charts.ActiveDays active days · @Model.Charts.TotalCompletions tasks completed</span>
+            </div>
+            <partial name="_Heatmap" model="Model.Charts" />
+        </div>
+
+        <div class="g-card mt-4">
+            <h2>🎖️ Achievements <span class="muted small">(@Model.Achievements.Count / @Model.AchievementTotal)</span></h2>
+            @if (Model.Achievements.Count == 0) { <div class="muted">No achievements unlocked yet.</div> }
+            else
+            {
+                <div class="badge-grid">
+                    @foreach (var a in Model.Achievements)
+                    {
+                        <div class="badge-tile unlocked" title="@a.Description">
+                            <span class="ico">@a.Icon</span><strong>@a.Name</strong><small>@a.Description</small>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

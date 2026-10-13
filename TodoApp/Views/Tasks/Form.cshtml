@@ -1,0 +1,144 @@
+@model TaskFormViewModel
+@{
+    var editing = Model.Id is not null;
+    var typeName = TaskLabels.Type(Model.Type);
+    ViewData["Title"] = (editing ? "Edit " : "Add ") + typeName.ToLowerInvariant();
+    var typeIcon = Model.Type switch { TaskType.Habit => "🔁", TaskType.Daily => "📅", _ => "📌" };
+    var catData = Categories.All.ToDictionary(c => c.Key.ToString(),
+        c => new { c.Unit, c.IsHours, Max = c.MaxPerEntry, c.Emoji });
+}
+
+<div class="auth-card g-card" style="max-width:620px">
+    <div class="text-center mb-3">
+        <div style="font-size:2.5rem">@typeIcon</div>
+        <h2 class="mb-1">@(editing ? "Edit" : "Add") @typeName.ToLowerInvariant()</h2>
+        <small class="muted">
+            @switch (Model.Type)
+            {
+                case TaskType.Habit: <text>Habits have no deadline: press <b>+</b> when you do well, <b>−</b> when you slip.</text> break;
+                case TaskType.Daily: <text>Repeats on a schedule. Missing a period costs you HP.</text> break;
+                default: <text>A task with a deadline. Missing the deadline costs you HP.</text> break;
+            }
+        </small>
+    </div>
+
+    <form asp-action="@(editing ? "Edit" : "Create")" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="Type" />
+
+        <div class="mb-3">
+            <label asp-for="Title" class="form-label"></label>
+            <input asp-for="Title" class="form-control" autofocus />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label"></label>
+            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+                <label asp-for="Difficulty" class="form-label"></label>
+                <select asp-for="Difficulty" class="form-select" id="difficulty">
+                    @for (var i = 1; i <= 5; i++)
+                    {
+                        <option value="@i" selected="@(Model.Difficulty == i)">@TaskLabels.Stars(i) @TaskLabels.Difficulty(i)</option>
+                    }
+                </select>
+                <span asp-validation-for="Difficulty" class="text-danger"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="Priority" class="form-label"></label>
+                <select asp-for="Priority" class="form-select">
+                    @foreach (var p in Enum.GetValues<TaskPriority>())
+                    {
+                        <option value="@p" selected="@(Model.Priority == p)">@TaskLabels.Priority(p)</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="reward-preview mb-3" id="reward-preview"></div>
+
+        @if (Model.Type == TaskType.Daily)
+        {
+            <div class="mb-3">
+                <label asp-for="Repeat" class="form-label"></label>
+                <select asp-for="Repeat" class="form-select">
+                    @foreach (var r in Enum.GetValues<RepeatType>())
+                    {
+                        <option value="@r" selected="@(Model.Repeat == r)">@TaskLabels.Repeat(r)</option>
+                    }
+                </select>
+                <span asp-validation-for="Repeat" class="text-danger"></span>
+                <div class="form-text">Weekly runs Monday to Sunday; monthly and yearly follow the calendar.</div>
+            </div>
+        }
+
+        @if (Model.Type == TaskType.Todo)
+        {
+            <div class="mb-3">
+                <label asp-for="Deadline" class="form-label"></label>
+                <input asp-for="Deadline" type="date" class="form-control" />
+                <span asp-validation-for="Deadline" class="text-danger"></span>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-sm-7">
+                    <label asp-for="Category" class="form-label"></label>
+                    <select asp-for="Category" class="form-select" id="category">
+                        <option value="">No category</option>
+                        @foreach (var c in Categories.All)
+                        {
+                            <option value="@c.Key" selected="@(Model.Category == c.Key)">@c.Emoji @c.Name (in @c.Unit)</option>
+                        }
+                    </select>
+                    <div class="form-text">Pick a category to count this task on the leaderboards.</div>
+                </div>
+                <div class="col-sm-5" id="effort-group">
+                    <label asp-for="Effort" class="form-label" id="effort-label"></label>
+                    <input asp-for="Effort" class="form-control" id="effort" type="number" step="any" min="0" />
+                    <span asp-validation-for="Effort" class="text-danger"></span>
+                </div>
+            </div>
+        }
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-game flex-grow-1">@(editing ? "Save changes" : "Add task")</button>
+            <a class="btn btn-ghost" asp-controller="Dashboard" asp-action="Index">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const cats = @Json.Serialize(catData);
+        const gold = @Json.Serialize(Rewards.BaseGold), exp = @Json.Serialize(Rewards.BaseExp),
+              dmg = @Json.Serialize(Rewards.BaseDamage), loss = @Json.Serialize(Rewards.BaseHpLoss);
+        const diff = document.getElementById('difficulty'), preview = document.getElementById('reward-preview');
+        const cat = document.getElementById('category'), effort = document.getElementById('effort');
+        const effortGroup = document.getElementById('effort-group'), effortLabel = document.getElementById('effort-label');
+
+        function renderPreview() {
+            const d = +diff.value, c = cat && cat.value ? cats[cat.value] : null;
+            const unit = c ? ' per ' + c.Unit.replace(/s$/, '') : '';
+            preview.innerHTML = 'Base reward' + unit + ': <b>+' + gold[d] + ' 🪙</b> · <b>+' + exp[d] + ' EXP</b> · ' +
+                '<b>⚔️ ' + dmg[d] + '</b> boss damage (if you joined the raid)' + ' · on a miss: <b>-' + loss[d] + ' ❤️</b>';
+        }
+        function renderEffort() {
+            if (!cat) return;
+            const c = cat.value ? cats[cat.value] : null;
+            effortGroup.style.display = c ? '' : 'none';
+            if (!c) { effort.value = ''; return; }
+            effortLabel.textContent = 'Number of ' + c.Unit;
+            effort.step = c.IsHours ? '0.25' : '1';
+            effort.max = c.Max;
+            effort.min = c.IsHours ? '0.25' : '1';
+        }
+        diff.addEventListener('change', renderPreview);
+        if (cat) cat.addEventListener('change', () => { renderEffort(); renderPreview(); });
+        renderEffort(); renderPreview();
+    </script>
+}

@@ -1,0 +1,75 @@
+@model ShopViewModel
+@{
+    ViewData["Title"] = "Shop";
+}
+
+<div class="page-head">
+    <div>
+        <h1>🛒 Shop</h1>
+        <p>Gear up your character, trade gold for pet eggs, show off your power.</p>
+    </div>
+    @if (Model.Authed && Model.Player is not null)
+    {
+        <div class="gold-chip">Balance: 🪙 @Model.Player.Gold.ToString("N0")</div>
+    }
+    else
+    {
+        <a class="btn btn-game" asp-controller="Account" asp-action="Login">Log in to buy</a>
+    }
+</div>
+
+<div class="tab-row">
+    @foreach (var c in Model.Categories)
+    {
+        <a asp-action="Index" asp-route-category="@c.Key" class="@(c.Key == Model.Current.Key ? "active" : "")">@c.Emoji @c.Name</a>
+    }
+</div>
+<div class="tab-row small">
+    <a asp-action="Index" asp-route-category="@Model.Current.Key" class="@(Model.Sub is null ? "active" : "")">All</a>
+    @foreach (var sub in Model.SubTypes)
+    {
+        <a asp-action="Index" asp-route-category="@Model.Current.Key" asp-route-sub="@sub" class="@(sub == Model.Sub ? "active" : "")">@sub</a>
+    }
+</div>
+
+<div class="item-grid mt-3">
+    @foreach (var item in Model.Items)
+    {
+        var owned = Model.Player is not null && item.Slot != ItemSlot.Egg && ShopLogic.Owns(Model.Player, item.Id);
+        var qty = Model.Player?.Items.FirstOrDefault(i => i.ItemId == item.Id)?.Quantity ?? 0;
+        <div class="item-card @item.Rarity.Css()">
+            <div class="item-emoji">@item.Emoji</div>
+            <div class="item-name">@item.Name</div>
+            <div class="item-meta"><span class="rar-tag">@item.Rarity.Label()</span><small>@item.SubType</small></div>
+            <p class="item-desc">@item.Description</p>
+            @if (!item.Stats.IsZero)
+            {
+                <div class="item-power">@ItemStats.Describe(item)<div class="muted small">@item.Slot.Label()</div></div>
+            }
+            else if (item.Slot == ItemSlot.Egg && qty > 0)
+            {
+                <div class="item-power" style="color:var(--muted)">You have @qty</div>
+            }
+            <div class="item-foot">
+                <span class="price">🪙 @item.Price.ToString("N0")</span>
+                @if (!Model.Authed)
+                {
+                    <a class="btn-small" asp-controller="Account" asp-action="Login">Log in</a>
+                }
+                else if (owned)
+                {
+                    <button class="btn-small" disabled>Owned</button>
+                }
+                else
+                {
+                    <form asp-action="Buy" method="post">
+                        <input type="hidden" name="itemId" value="@item.Id" />
+                        <input type="hidden" name="category" value="@Model.Current.Key" />
+                        <input type="hidden" name="sub" value="@Model.Sub" />
+                        <button type="submit" class="btn-buy" disabled="@(Model.Player!.Gold < item.Price)">Buy</button>
+                    </form>
+                }
+            </div>
+        </div>
+    }
+</div>

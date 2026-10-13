@@ -1,0 +1,110 @@
+@model CharacterViewModel
+@{
+    ViewData["Title"] = "Character";
+}
+
+<div class="page-head">
+    <div>
+        <h1>🧙 @Model.Username's character</h1>
+        <p>Level @Model.Level · @Model.Title</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <a class="btn btn-ghost btn-sm" asp-controller="Profile" asp-action="Me">👤 Public profile</a>
+        <div class="gold-chip">🪙 @Model.Player.Gold.ToString("N0")</div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <div class="g-card">
+            <h2 class="text-center mb-3">Equipment</h2>
+            <div class="doll">
+                @foreach (var s in Model.Slots)
+                {
+                    var slotName = s.Slot.ToString().ToLowerInvariant();
+                    if (s.Item is { } it)
+                    {
+                        <div class="slot slot-@slotName filled @it.Rarity.Css()" title="@it.Name — @ItemStats.Describe(it)">
+                            <span class="s-emoji">@it.Emoji</span>
+                            <span>@it.Name</span>
+                            <form asp-action="Unequip" method="post">
+                                <input type="hidden" name="slot" value="@s.Slot" />
+                                <button type="submit" class="x-btn" aria-label="Unequip @it.Name">✕</button>
+                            </form>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="slot slot-@slotName"><span class="s-empty">@s.Slot.Emoji()</span>@s.Slot.Label()</div>
+                    }
+                }
+                <div class="slot slot-avatar">🧙</div>
+                @if (Model.Companion is { } pet)
+                {
+                    var sp = PetCatalog.Get(pet.SpeciesId);
+                    <div class="slot slot-companion filled @sp.Rarity.Css()" title="@pet.Name">
+                        <span class="s-emoji">@sp.Emoji</span><span>@pet.Name</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="slot slot-companion"><span class="s-empty">🐾</span>Companion</div>
+                }
+            </div>
+            @{
+                var t = Model.Total; var g = Model.Gear; var bs = Model.Base;
+                int Pct(int v, int max) => max <= 0 ? 0 : Math.Clamp(v * 100 / max, 0, 100);
+            }
+            <div class="mt-4">
+                <div class="vital"><span class="vital-label">❤️ HP</span><div class="xp-bar vital-hp"><div class="xp-fill" style="width:@(Pct(Model.Player.Hp, t.MaxHp))%"></div></div><span class="vital-num">@Model.Player.Hp / @t.MaxHp</span></div>
+                <div class="vital"><span class="vital-label">💧 MP</span><div class="xp-bar vital-mp"><div class="xp-fill" style="width:@(Pct(Model.Player.Mana, t.MaxMana))%"></div></div><span class="vital-num">@Model.Player.Mana / @t.MaxMana</span></div>
+                <div class="vital"><span class="vital-label">⭐ EXP</span><div class="xp-bar"><div class="xp-fill" style="width:@(Pct(Model.Player.Exp - Model.LevelStartXp, Model.NextLevelXp - Model.LevelStartXp))%"></div></div><span class="vital-num">@Model.Player.Exp / @Model.NextLevelXp</span></div>
+            </div>
+            <table class="stat-table">
+                <tr><td>⚔️ ATK</td><td>@t.Atk</td><td class="bonus">@(g.Atk > 0 ? $"({bs.Atk} +{g.Atk})" : "")</td><td class="hint">boss damage</td></tr>
+                <tr><td>🔮 INT</td><td>@t.Int</td><td class="bonus">@(g.Int > 0 ? $"({bs.Int} +{g.Int})" : "")</td><td class="hint">boss damage (½)</td></tr>
+                <tr><td>🛡️ DEF</td><td>@t.Def</td><td class="bonus">@(g.Def > 0 ? $"({bs.Def} +{g.Def})" : "")</td><td class="hint">less HP lost on a miss</td></tr>
+                <tr><td>🍀 LUK</td><td>@t.Luk</td><td class="bonus">@(g.Luk > 0 ? $"({bs.Luk} +{g.Luk})" : "")</td><td class="hint">more gold earned</td></tr>
+            </table>
+            @if (Model.Player.Deaths > 0) { <div class="text-center muted small mt-2">💀 Fallen @Model.Player.Deaths @(Model.Player.Deaths == 1 ? "time" : "times")</div> }
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        <div class="g-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="mb-0">🎒 Bag</h2>
+                <a class="btn-small" asp-controller="Shop" asp-action="Index">🛒 Go to shop</a>
+            </div>
+            @if (Model.Bag.Count == 0)
+            {
+                <div class="muted">Your bag is empty. Visit the shop to get some gear!</div>
+            }
+            else
+            {
+                <div class="bag-grid">
+                    @foreach (var b in Model.Bag)
+                    {
+                        <div class="bag-tile @b.Item.Rarity.Css()">
+                            <span class="b-emoji">@b.Item.Emoji</span>
+                            <strong>@b.Item.Name</strong>
+                            <small>@b.Item.Slot.Label()@(b.Qty > 1 ? $" · x{b.Qty}" : "")</small>
+                            @if (!b.Item.Stats.IsZero) { <small style="color:var(--c-sport)">@ItemStats.Describe(b.Item)</small> }
+                            @if (b.Item.Slot == ItemSlot.Egg)
+                            {
+                                <a class="btn-small" asp-controller="Pet" asp-action="Index">Incubate</a>
+                            }
+                            else
+                            {
+                                <form asp-action="Equip" method="post">
+                                    <input type="hidden" name="itemId" value="@b.Item.Id" />
+                                    <button type="submit" class="btn-small">Equip</button>
+                                </form>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
