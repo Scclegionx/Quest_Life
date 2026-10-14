@@ -1,0 +1,460 @@
+@using System.Globalization
+@using TodoApp.Data
+@{
+    ViewData["Title"] = "Guide";
+    var ci = CultureInfo.InvariantCulture;
+    string P(double v) => v.ToString("0.##", ci);
+    string Hm(int minutes) => minutes >= 60 ? $"{minutes / 60} h" : $"{minutes} min";
+
+    var toc = new (string Id, string Icon, string Title)[]
+    {
+        ("start", "🚀", "Quick start"),
+        ("account", "👤", "Account & time zone"),
+        ("tasks", "📋", "Tasks: habits, dailies, to-dos"),
+        ("rewards", "💰", "Rewards & penalties"),
+        ("character", "🧙", "Character, level & stats"),
+        ("leaderboards", "🏆", "Leaderboards"),
+        ("raid", "🐲", "Raid boss"),
+        ("shop", "🛒", "Shop & equipment"),
+        ("pets", "🐾", "Pets"),
+        ("achievements", "🎖️", "Achievements & titles"),
+        ("dashboard", "📈", "Dashboard & charts"),
+        ("players", "🔎", "Players & profiles"),
+        ("phone", "📱", "Phone & installing the app"),
+        ("discord", "💬", "Discord commands"),
+        ("faq", "❓", "FAQ & troubleshooting"),
+    };
+
+    var ex = Rewards.Compute(3, 2m, Rewards.StreakMultiplier(5), PlayerStats.Base(1));
+    var streakCapBonus = GameSettings.StreakStep * GameSettings.StreakCapDays * 100;
+    var levels = new[] { 1, 2, 3, 5, 8, 10, 12, 16, 20 };
+}
+
+<div class="page-head">
+    <div>
+        <h1>📖 QuestLife guide</h1>
+        <p>Everything you need to know about turning your life into a game. The numbers on this page are read live from the game's settings, so they are always up to date.</p>
+    </div>
+</div>
+
+<div class="help-layout">
+    <nav class="help-toc" aria-label="Guide contents">
+        <div class="help-toc-title">Contents</div>
+        @foreach (var t in toc)
+        {
+            <a href="#@t.Id" data-target="@t.Id"><span class="ico">@t.Icon</span>@t.Title</a>
+        }
+    </nav>
+
+    <div class="help-content">
+
+        <!-- ===================== QUICK START ===================== -->
+        <section id="start" class="g-card help-section">
+            <h2>🚀 Quick start</h2>
+            <p>QuestLife is a to-do list with a game on top. You complete real-life tasks, and your character earns <b>gold</b> and <b>EXP</b>, levels up, buys gear, raises pets, fights a weekly <b>raid boss</b> together with everyone else and climbs the <b>leaderboards</b>. Skip your tasks and you lose <b>HP</b>.</p>
+            <ol class="help-steps">
+                <li><b>Create your character.</b> Choose <i>Play now</i> (or <i>Sign up</i>), pick a username and your time zone.</li>
+                <li><b>Add some tasks</b> on the <i>Dashboard</i> with the <i>+ Add</i> buttons (on a phone, the round <b>+</b> button). Start with one habit, one daily and one to-do.</li>
+                <li><b>Complete them.</b> Tick a daily or to-do, or press <b>+</b> on a habit. Gold and EXP arrive instantly.</li>
+                <li><b>Choose a category on your to-dos</b> (Study, Gaming, Sports, ...) with the number of hours or times. That is what puts you on the <i>Leaderboards</i>.</li>
+                <li><b>Join the raid</b> on the <i>Raid Boss</i> page. From then on every task you complete also hits the boss.</li>
+                <li><b>Spend your gold</b> in the <i>Shop</i>: equip gear on the <i>Character</i> page, hatch pets on the <i>Pets</i> page.</li>
+                <li><b>Check <i>Achievements</i></b> now and then and claim rewards and titles.</li>
+            </ol>
+            <div class="callout tip"><b>Tip:</b> do not add dozens of tasks on day one. Three or four you will really do beat twenty you will not, because missed dailies and overdue to-dos cost HP.</div>
+
+            <h3>Where things are</h3>
+            <table class="help-table">
+                <tr><th>Page</th><th>What it is for</th><th>Needs login?</th></tr>
+                <tr><td>🏆 Leaderboards</td><td>Top players in five categories, this week or all time</td><td>No</td></tr>
+                <tr><td>🐲 Raid Boss</td><td>This week's boss, top warriors, rewards</td><td>View: no. Join / claim: yes</td></tr>
+                <tr><td>🛒 Shop</td><td>Browse and buy gear and pet eggs</td><td>Browse: no. Buy: yes</td></tr>
+                <tr><td>🔎 Players</td><td>Search players and open their profiles</td><td>No</td></tr>
+                <tr><td>🎯 Dashboard</td><td>Your tasks, character summary, charts</td><td>Yes</td></tr>
+                <tr><td>🧙 Character</td><td>Equipment, bag, stats</td><td>Yes</td></tr>
+                <tr><td>🐾 Pets</td><td>Eggs, incubator, coop, feeding</td><td>Yes</td></tr>
+                <tr><td>🎖️ Achievements</td><td>Progress, rewards and titles</td><td>Yes</td></tr>
+                <tr><td>⚙️ Settings</td><td>Your time zone</td><td>Yes</td></tr>
+            </table>
+        </section>
+
+        <!-- ===================== ACCOUNT ===================== -->
+        <section id="account" class="g-card help-section">
+            <h2>👤 Account &amp; time zone</h2>
+            <ul>
+                <li><b>Sign up:</b> username (3–50 characters: letters, numbers and underscores), email, password (at least 8 characters) and your time zone. The time zone is detected from your browser and you can change it.</li>
+                <li><b>Log in</b> with your username <i>or</i> your email. <i>Remember me</i> keeps you signed in on that device.</li>
+                <li><b>Log out</b> with the button in the top bar (on a phone: <i>More</i> → <i>Log out</i>).</li>
+                <li><b>There is no self-service password reset yet.</b> Keep your password safe.</li>
+            </ul>
+
+            <h3>Why your time zone matters</h3>
+            <p>Your time zone decides when <b>your</b> day starts. It controls: when dailies reset, when a to-do deadline counts as missed, where your streak day begins, when your mana refills, and which day your charts and heat map put an activity on. Change it in <i>Settings</i> (the ⚙️ button next to your name, or <i>More → Settings</i> on a phone) if you travel or move.</p>
+            <div class="callout"><b>One thing is shared by everybody:</b> the weekly leaderboards and the raid boss use one fixed week, from <b>Monday 00:00 to Sunday 24:00 at UTC+@(P(AppTime.Offset.TotalHours))</b> (Vietnam time), so that everyone runs the same race. If you live far from that zone, your "week" on those two features starts at a different local time than your own Monday.</div>
+        </section>
+
+        <!-- ===================== TASKS ===================== -->
+        <section id="tasks" class="g-card help-section">
+            <h2>📋 Tasks: habits, dailies and to-dos</h2>
+            <p>There are three kinds of task. They all have a <b>title</b>, an optional <b>description</b>, a <b>difficulty</b> (1–5) and a <b>priority</b> (Low / Medium / High). Difficulty decides how big the rewards and penalties are. Priority is only for sorting and colour (red = high, yellow = medium, blue = low): it never changes rewards.</p>
+
+            <h3>🔁 Habits</h3>
+            <p>Things you do (or resist) again and again, with no schedule and no deadline.</p>
+            <ul>
+                <li>Press <b>+</b> when you did well: you get the task's reward. You can press it as often as it really happened.</li>
+                <li>Press <b>−</b> when you slipped: you lose HP.</li>
+                <li>The card shows your total <span class="count-pos">+</span> and <span class="count-neg">−</span> counts.</li>
+            </ul>
+
+            <h3>📅 Dailies</h3>
+            <p>Tasks that repeat on a schedule. Choose how often: <b>Daily</b>, <b>Weekly</b> (Monday to Sunday), <b>Monthly</b> or <b>Yearly</b> (calendar based).</p>
+            <ul>
+                <li>You can complete a daily <b>once per period</b>. Once done, the box stays ticked until the next period starts.</li>
+                <li>If a period ends without you completing it, you lose HP automatically and that daily's streak resets.</li>
+                <li>Each daily has its own streak (🔥 chip on the card): consecutive completed periods. It gives a reward bonus (see <a href="#rewards">Rewards</a>).</li>
+                <li>A new daily is only counted from the period it was created in. Nothing earlier is held against you.</li>
+            </ul>
+
+            <h3>📌 To-dos</h3>
+            <p>One-off tasks, with extra fields:</p>
+            <ul>
+                <li><b>Deadline</b> (optional). If it passes and the task is still open, you lose HP <b>once</b> for that task. You can still complete it late and get the reward.</li>
+                <li><b>Category + effort</b> (optional). Pick one of the five categories and enter how many hours (or times). This is how your real-life effort reaches the leaderboards, and it multiplies the reward.</li>
+            </ul>
+            <table class="help-table">
+                <tr><th>Category</th><th>Counted in</th><th>Maximum per task</th></tr>
+                @foreach (var c in Categories.All)
+                {
+                    <tr><td>@c.Emoji @c.Name</td><td>@c.Unit</td><td>@c.MaxPerEntry.Num() @c.Unit</td></tr>
+                }
+            </table>
+            <p class="muted small">Hours can be entered in quarter-hour steps (for example 1.25). "Times" are whole numbers.</p>
+
+            <h3>Adding, editing and deleting</h3>
+            <ul>
+                <li><b>Add:</b> <i>+ Add</i> on each column of the Dashboard. On a phone, use the round <b>+</b> button; it adds the kind of task of the tab you are looking at. The form shows the base reward for the difficulty you pick.</li>
+                <li><b>Edit:</b> ✏️ on the card. You can change everything except the kind of task.</li>
+                <li><b>Delete:</b> 🗑️ on the card. It cannot be undone.</li>
+                <li>Completed to-dos go to <i>Recently completed</i> under the to-do list (the last five).</li>
+                <li>A completed task cannot be un-completed, so tick it when it is really done.</li>
+            </ul>
+            <div class="callout tip"><b>Tip:</b> dailies and habits do not need a category. Only <b>to-dos with a category</b> feed the leaderboards and the activity streak.</div>
+        </section>
+
+        <!-- ===================== REWARDS ===================== -->
+        <section id="rewards" class="g-card help-section">
+            <h2>💰 Rewards &amp; penalties</h2>
+            <h3>What you get for completing a task</h3>
+            <ul class="formula">
+                <li><b>Gold</b> = base gold × effort × streak bonus × (1 + LUK ÷ @P(GameSettings.LuckGoldDivisor))</li>
+                <li><b>EXP</b> = base EXP × effort × streak bonus</li>
+                <li><b>Raid damage</b> = base damage × effort × (1 + (ATK + INT ÷ 2) ÷ @P(GameSettings.PowerDamageDivisor))</li>
+            </ul>
+            <ul>
+                <li><b>Effort</b> is the hours or times you entered on a to-do with a category. Everything else (habits, dailies, to-dos without a category) uses an effort of 1.</li>
+                <li><b>Streak bonus</b> is +@P(GameSettings.StreakStep * 100)% for every streak day, up to +@P(streakCapBonus)% at @GameSettings.StreakCapDays days. For a to-do with a category, it uses your <b>activity streak</b> (consecutive days on which you completed a categorised to-do). For a daily, it uses that daily's own streak. Habits and to-dos without a category get no bonus.</li>
+                <li><b>LUK</b> only affects gold. <b>ATK</b> and <b>INT</b> only affect raid damage (damage is dealt only if you joined the raid and the boss is still alive).</li>
+                <li>Completing any task also <b>heals</b> you a little (@GameSettings.HealPerDifficulty HP per difficulty point), and <b>levelling up refills your HP and mana</b>.</li>
+            </ul>
+
+            <h3>Base values per difficulty</h3>
+            <table class="help-table">
+                <tr><th>Difficulty</th><th>Gold</th><th>EXP</th><th>Raid damage</th><th>HP lost on a miss</th></tr>
+                @for (var d = 1; d <= 5; d++)
+                {
+                    <tr><td><span class="stars">@TaskLabels.Stars(d)</span> @TaskLabels.Difficulty(d)</td><td>@Rewards.BaseGold[d]</td><td>@Rewards.BaseExp[d]</td><td>@Rewards.BaseDamage[d]</td><td>@Rewards.BaseHpLoss[d]</td></tr>
+                }
+            </table>
+
+            <div class="callout"><b>Worked example.</b> A Medium (3) Study to-do of 2 hours, done with a 5-day streak by a level-1 character with no gear (ATK @PlayerStats.Base(1).Atk, INT @PlayerStats.Base(1).Int, LUK @PlayerStats.Base(1).Luk): gold = 20 × 2 × @P(Rewards.StreakMultiplier(5)) × (1 + @PlayerStats.Base(1).Luk/@P(GameSettings.LuckGoldDivisor)) = <b>@ex.Gold</b>, EXP = 15 × 2 × @P(Rewards.StreakMultiplier(5)) = <b>@ex.Exp</b>, raid damage = 14 × 2 × (1 + (@PlayerStats.Base(1).Atk + @PlayerStats.Base(1).Int/2)/@P(GameSettings.PowerDamageDivisor)) = <b>@ex.Damage</b>.</div>
+            <p class="muted small">Your stats are taken <i>before</i> the reward is added, so if a task levels you up, the new stats apply from your next task.</p>
+
+            <h3>What costs you HP</h3>
+            <ul>
+                <li>Pressing <b>−</b> on a habit.</li>
+                <li>A <b>daily</b> period that ends without you completing it.</li>
+                <li>A <b>to-do</b> whose deadline has passed while it is still open (once per task).</li>
+            </ul>
+            <p>The loss depends on the difficulty (table above) and is reduced by your <b>DEF</b>: @P(100 / GameSettings.DefReductionDivisor)% less per DEF point, at most @P(GameSettings.DefReductionCap * 100)% less.</p>
+            <p>Penalties for missed dailies and deadlines are applied <b>automatically in the background</b>, even when you are not using the app. When you come back you will see a red notice telling you what you lost.</p>
+
+            <div class="callout warn"><b>Death.</b> If your HP reaches 0, your character falls: you go back to <b>level 1 with 0 EXP</b> and lose <b>all gold, all equipment and bag items, all pets and eggs, and your coop and incubator levels</b>. You keep your achievements, titles, tasks and raid membership, and you restart with full HP. There is no passive HP regeneration, so protect your HP: get gear with HP, finish your dailies, and do not leave deadlines to expire.</div>
+        </section>
+
+        <!-- ===================== CHARACTER ===================== -->
+        <section id="character" class="g-card help-section">
+            <h2>🧙 Character, level &amp; stats</h2>
+            <h3>Level and EXP</h3>
+            <p>EXP needed to reach level N = @P((double)GameSettings.LevelExpBase) × (N − 1)<sup>@P(GameSettings.LevelExpExponent)</sup>. The more you level, the more each level costs.</p>
+            <table class="help-table">
+                <tr><th>Level</th><th>Total EXP</th><th>Rank</th><th>Max HP</th><th>Max MP</th><th>ATK</th><th>INT</th><th>DEF</th><th>LUK</th></tr>
+                @foreach (var l in levels)
+                {
+                    var b = PlayerStats.Base(l);
+                    <tr><td>@l</td><td>@Gamification.XpForLevel(l).ToString("N0")</td><td>@Gamification.RankIconOf(l) @Gamification.TitleOf(l)</td><td>@b.MaxHp</td><td>@b.MaxMana</td><td>@b.Atk</td><td>@b.Int</td><td>@b.Def</td><td>@b.Luk</td></tr>
+                }
+            </table>
+            <p class="muted small">Stats shown are the base values by level, before equipment. Your <i>rank</i> (Novice, Apprentice, ...) changes automatically at these levels:
+                @(string.Join(" · ", GameCatalog.Current.LevelTitles.Select(t => $"{t.Icon} {t.Name} (from level {t.MinLevel})"))).</p>
+
+            <h3>The stats</h3>
+            <table class="help-table">
+                <tr><th>Stat</th><th>What it does</th></tr>
+                <tr><td>❤️ HP</td><td>Your life. Goes down on misses, up a little on every completed task and fully on level-up. At 0 you die.</td></tr>
+                <tr><td>💧 MP (mana)</td><td>Refills completely at the start of each new day (your time zone). It has no use yet: it is reserved for skills that will come later from equipment and a skill tree.</td></tr>
+                <tr><td>⚔️ ATK</td><td>Raises raid damage.</td></tr>
+                <tr><td>🔮 INT</td><td>Raises raid damage (half as much as ATK).</td></tr>
+                <tr><td>🛡️ DEF</td><td>Reduces the HP you lose on a miss.</td></tr>
+                <tr><td>🍀 LUK</td><td>Raises the gold you earn from tasks.</td></tr>
+            </table>
+
+            <h3>Equipment and bag</h3>
+            <ul>
+                <li>The <i>Character</i> page shows six equipment slots: <b>Weapon, Helmet, Armor, Boots, Ring, Necklace</b>, plus a <b>companion</b> slot for a pet.</li>
+                <li>Everything you own but are not wearing is in your <b>Bag</b>. Press <b>Equip</b> to wear it; equipping into an occupied slot swaps the old item back to the bag. Press the ✕ on a slot to take an item off.</li>
+                <li>Equipment adds to your base stats; the green number in brackets next to a stat is the part coming from gear.</li>
+                <li>The companion pet is a showpiece for now: it appears on your character and profile but does not change stats.</li>
+            </ul>
+        </section>
+
+        <!-- ===================== LEADERBOARDS ===================== -->
+        <section id="leaderboards" class="g-card help-section">
+            <h2>🏆 Leaderboards</h2>
+            <p>The <i>Leaderboards</i> page (the home page) has one board for each category. Switch between <b>This week</b> and <b>All time</b>. Each board shows the top 10 and highlights you.</p>
+            <table class="help-table">
+                <tr><th>Board</th><th>Category</th><th>Ranked by</th></tr>
+                @foreach (var c in Categories.All)
+                {
+                    <tr><td>@c.Emoji @c.BoardName</td><td>@c.Name</td><td>total @c.Unit</td></tr>
+                }
+            </table>
+            <ul>
+                <li><b>Only to-dos with a category</b> count. The effort you entered (hours or times) is added to the board when you complete the to-do.</li>
+                <li>"This week" runs Monday 00:00 to Sunday 24:00 at UTC+@(P(AppTime.Offset.TotalHours)) and then starts again from zero.</li>
+                <li>Your rank in each category is also shown on your Dashboard ("This week's standings") and on your profile (this week and all time).</li>
+                <li>Click any name to open that player's profile.</li>
+            </ul>
+        </section>
+
+        <!-- ===================== RAID ===================== -->
+        <section id="raid" class="g-card help-section">
+            <h2>🐲 Raid boss</h2>
+            <p>One boss at a time, shared by <b>all players</b>. Together you must bring its HP bar to zero before it leaves.</p>
+            <ol>
+                <li>Open <i>Raid Boss</i> and press <b>Join this week's raid</b> (once per raid).</li>
+                <li>From then on <b>every task you complete</b> (habit +, daily or to-do) deals damage to the boss. The damage formula is in <a href="#rewards">Rewards</a>; raise ATK and INT with gear to hit harder.</li>
+                <li>The page shows the boss's remaining HP, a countdown to when it leaves, and the <b>Top warriors</b> ranking.</li>
+                <li>When the total damage reaches the boss's HP, it is <b>defeated</b>. Nobody can deal more damage to it, and everybody who dealt damage can press <b>Claim</b> once to receive the <b>boss rewards</b> (listed on the page: gold, items, pets and/or titles).</li>
+                <li>If the boss is not defeated before the countdown ends, it leaves and <b>there are no rewards</b>. A new boss arrives next.</li>
+            </ol>
+            <ul>
+                <li>Each boss has a fixed amount of HP and its own rewards. They change from boss to boss.</li>
+                <li>If you could not claim a defeated boss's rewards in time, the claim button stays on the Raid page until you use it.</li>
+                <li>Gear you already own cannot be received twice: if a reward item is gear you have, you get its price in gold instead.</li>
+                <li>Pets from a raid are added even if your coop is full.</li>
+            </ul>
+        </section>
+
+        <!-- ===================== SHOP ===================== -->
+        <section id="shop" class="g-card help-section">
+            <h2>🛒 Shop &amp; equipment</h2>
+            <ul>
+                <li>Anyone can browse the shop. <b>Buying needs an account</b> and enough gold.</li>
+                <li>Categories: @(string.Join(", ", ItemCatalog.Categories.Select(c => $"{c.Emoji} {c.Name}"))). Use the small tabs under them to filter by kind (swords, bows, boots, ...).</li>
+                <li>Every item has a <b>rarity</b> shown by its colour and label: @(string.Join(" → ", Enum.GetValues<Rarity>().Select(r => r.Label()))). Rarer items cost more and give bigger bonuses.</li>
+                <li>The orange line on a card lists the stat bonuses the item gives (ATK, DEF, INT, LUK, HP, MP).</li>
+                <li><b>Gear is unique:</b> you can own each piece only once. <b>Eggs stack:</b> you can hold several of the same egg.</li>
+                <li>After buying, find the item in your <b>Bag</b> on the <i>Character</i> page and press <b>Equip</b>. Eggs go to the <i>Pets</i> page.</li>
+                <li>Items cannot be sold or refunded, so check the stats before you buy.</li>
+            </ul>
+            <div class="callout tip"><b>Which stats first?</b> HP and DEF keep you alive, ATK/INT help the raid, LUK grows your gold. A balanced set is a safe start; push the stat that matches how you play.</div>
+        </section>
+
+        <!-- ===================== PETS ===================== -->
+        <section id="pets" class="g-card help-section">
+            <h2>🐾 Pets</h2>
+            <ol>
+                <li><b>Buy an egg</b> in the shop (<i>Pets &amp; Eggs</i>).</li>
+                <li>On the <i>Pets</i> page, <b>Incubate</b> it. You need a free incubator slot.</li>
+                <li><b>Wait</b> for the timer. The page counts down and refreshes by itself when the egg is ready.</li>
+                <li>Press <b>Hatch</b>. You get a random pet of that rarity (a @P(GameSettings.HatchUpgradeChance * 100)% chance of one rarity higher, except Legendary eggs which always give Legendary).</li>
+                <li>The pet moves into your <b>coop</b>. If the coop is full the egg stays in the incubator: upgrade the coop first.</li>
+            </ol>
+            <table class="help-table">
+                <tr><th>Egg</th><th>Rarity</th><th>Incubation</th></tr>
+                @foreach (var e in PetCatalog.Eggs.OrderBy(e => e.Value.Minutes))
+                {
+                    var item = ItemCatalog.Find(e.Key);
+                    <tr><td>@item?.Emoji @(item?.Name ?? e.Key)</td><td>@e.Value.Rarity.Label()</td><td>@Hm(e.Value.Minutes)</td></tr>
+                }
+            </table>
+            <h3>Raising pets</h3>
+            <ul>
+                <li><b>Feed</b> a pet for @GameSettings.PetFeedCost gold to give it @GameSettings.PetFeedXp pet-XP. A pet at level N needs @GameSettings.PetXpPerLevel × N XP to level up. The top pet level is @GameSettings.MaxPetLevel.</li>
+                <li><b>Companion:</b> press <i>Choose</i> on one pet to make it your companion. It is shown on your character and profile.</li>
+            </ul>
+            <h3>Buildings</h3>
+            <ul>
+                <li><b>Coop</b> (level up to @GameSettings.MaxCoopLevel): holds @GameSettings.CoopCapacityBase + @GameSettings.CoopCapacityPerLevel × level pets. Upgrade cost: @GameSettings.CoopUpgradeCostPerLevel × current level gold.</li>
+                <li><b>Incubator</b> (level up to @GameSettings.MaxIncubatorLevel): incubates as many eggs at once as its level. Upgrade cost: @GameSettings.IncubatorUpgradeCostPerLevel × current level gold.</li>
+            </ul>
+            <div class="callout warn">Remember: dying removes all your pets, eggs and building levels.</div>
+        </section>
+
+        <!-- ===================== ACHIEVEMENTS ===================== -->
+        <section id="achievements" class="g-card help-section">
+            <h2>🎖️ Achievements &amp; titles</h2>
+            <ul>
+                <li>The <i>Achievements</i> page lists goals (streaks, hours studied, level, tasks done, pets owned, ...) with a progress bar.</li>
+                <li>When a goal is complete, press <b>Claim reward</b>: you get <b>gold</b> and a <b>title</b>. Each achievement can be claimed once.</li>
+                <li><b>Titles</b> are labels for your name. Pick one with <i>Use as title</i> and it is shown on your Dashboard and profile in place of your level rank. <i>Remove title</i> brings the rank back. Some titles come from defeating raid bosses.</li>
+                <li><b>Badges</b> on the Dashboard unlock automatically and are just for show.</li>
+                <li>Your level <b>rank</b> (Novice → Legend) is automatic and is separate from titles.</li>
+            </ul>
+            <p class="muted small">There are @GameCatalog.Current.Achievements.Count achievements and @GameCatalog.Current.Badges.Count badges, and the lists can grow over time.</p>
+        </section>
+
+        <!-- ===================== DASHBOARD ===================== -->
+        <section id="dashboard" class="g-card help-section">
+            <h2>📈 Dashboard &amp; charts</h2>
+            <ul>
+                <li><b>Character card:</b> level ring, HP, MP and EXP bars, gold, your activity streak 🔥, and shortcuts to the raid and your profile.</li>
+                <li><b>Your quests:</b> the three task lists. A red border means overdue; a yellow badge means due today.</li>
+                <li><b>Hours per day:</b> hours you logged in Study, Gaming and Sports over the last 14 days.</li>
+                <li><b>Times per day:</b> junk food skipped and bad habits resisted, last 14 days.</li>
+                <li><b>EXP &amp; gold earned:</b> what your completed tasks gave you each day, last 14 days.</li>
+                <li><b>Tasks by type:</b> how many habits, dailies and to-dos you completed in the last 30 days.</li>
+                <li><b>Activity heat map:</b> each square is a day (newest on the right). It counts how many tasks you completed that day; the brighter the colour, the busier the day compared with your busiest day.</li>
+                <li><b>This week's standings:</b> your rank in each category, plus a shortcut to add a to-do for it.</li>
+                <li><b>Recent achievements</b> (your latest logged feats) and <b>Badges</b>.</li>
+            </ul>
+            <p>Notifications appear as a coloured banner at the top after every action: gold for good news, red for warnings and penalties.</p>
+        </section>
+
+        <!-- ===================== PLAYERS ===================== -->
+        <section id="players" class="g-card help-section">
+            <h2>🔎 Players &amp; profiles</h2>
+            <ul>
+                <li><b>Players</b> lets you search by username (part of a name is enough). With an empty search it shows the top players by EXP.</li>
+                <li>A <b>profile</b> shows a player's level, rank/title, equipment, stats (with a radar chart), pets, titles, achievements, ranks in every leaderboard, raid damage, charts and heat map.</li>
+                <li>Your own profile is one click away: press your <b>name or avatar</b> in the top bar.</li>
+                <li><b>Privacy:</b> profiles are public (you can even view them without logging in). They never show your email, your tasks or your notes.</li>
+            </ul>
+        </section>
+
+        <!-- ===================== PHONE ===================== -->
+        <section id="phone" class="g-card help-section">
+            <h2>📱 Phone &amp; installing the app</h2>
+            <h3>Using it on a phone</h3>
+            <ul>
+                <li>The bottom bar has the main pages: <b>Quests</b> (Dashboard), <b>Raid</b>, <b>Shop</b>, <b>Hero</b> (Character) and <b>More</b>. <i>More</i> opens the rest: Profile, Pets, Achievements, Leaderboards, Players, Settings and Log out.</li>
+                <li>On the Dashboard, switch between <b>Habits / Dailies / To-Dos</b> with the tabs. The round <b>+</b> button adds a task of the tab you are on. The app remembers your last tab.</li>
+                <li>Charts are swipeable sideways, and so is the heat map.</li>
+            </ul>
+            <h3>Install it like an app</h3>
+            <p>QuestLife can be installed on your home screen, opens full screen and has its own icon.</p>
+            <ul>
+                <li><b>Android (Chrome):</b> tap <b>Install</b> on the banner that appears at the bottom, or open the browser menu and choose <i>Install app</i>.</li>
+                <li><b>iPhone / iPad (Safari):</b> tap the <b>Share</b> button, then <b>Add to Home Screen</b>. This only works in Safari.</li>
+                <li><b>Computer (Chrome / Edge):</b> use the install icon at the right end of the address bar.</li>
+            </ul>
+            <p class="muted small">The app always needs an internet connection: if you are offline you will see a friendly "You're offline" page. Installing needs the site to be served over HTTPS.</p>
+        </section>
+
+        <!-- ===================== DISCORD ===================== -->
+        <section id="discord" class="g-card help-section">
+            <h2>💬 Discord commands</h2>
+            <p>If your community has QuestLife in its Discord server, you can manage your quests from a channel without opening the website. Type <code>/</code> in the QuestLife channel and Discord shows the commands and the boxes to fill in. Replies are <b>private</b>: only you can see them.</p>
+
+            <h3>Link your account (once)</h3>
+            <ol>
+                <li>Open <i>Settings</i> (⚙️) and, in the <b>Link Discord</b> card, press <b>Get a link code</b>.</li>
+                <li>Copy the code (it looks like <code>AB12-CD34</code>). It works for 10 minutes and only once.</li>
+                <li>In the Discord channel type <code>/link</code> and paste the code into the <b>code</b> box.</li>
+                <li>You get a green <b>Linked!</b> message. Use <b>Unlink Discord</b> in Settings, or <code>/unlink</code> in Discord, to disconnect.</li>
+            </ol>
+            <div class="callout">Never type your QuestLife password in Discord. The link code is all that is needed, and Discord itself tells us who you are afterwards.</div>
+
+            <h3>Commands</h3>
+            <table class="help-table">
+                <tr><th>Command</th><th>What it does</th></tr>
+                <tr><td><code>/quests</code></td><td>Shows your habits, dailies and to-dos. Press a green <b>✅</b> button to complete a daily or to-do, a <b>＋</b> button for a habit, or <b>🔄</b> to refresh. The list updates in place.</td></tr>
+                <tr><td><code>/done task:</code></td><td>Complete a daily or to-do. Start typing and pick the task from the list that appears.</td></tr>
+                <tr><td><code>/todo title:</code></td><td>Create a to-do. Optional boxes: <b>difficulty</b>, <b>priority</b>, <b>category</b> + <b>effort</b>, <b>deadline</b>, <b>description</b>.</td></tr>
+                <tr><td><code>/daily add title:</code></td><td>Create a recurring task. Optional: <b>repeat</b> (daily, weekly, monthly, yearly), difficulty, priority, description.</td></tr>
+                <tr><td><code>/habit add</code></td><td>Create a habit.</td></tr>
+                <tr><td><code>/habit plus</code> / <code>/habit minus</code></td><td>Press + (you did well) or − (you slipped) on a habit, chosen by name.</td></tr>
+                <tr><td><code>/me</code></td><td>Your character card: level, HP, mana, EXP, stats, gold, streak and companion pet.</td></tr>
+                <tr><td><code>/help</code></td><td>Lists the commands.</td></tr>
+            </table>
+            <ul>
+                <li><b>Deadline</b> accepts <code>today</code>, <code>tomorrow</code>, <code>+3d</code> (three days from now) or a date such as <code>2026-10-25</code>.</li>
+                <li>A <b>category</b> needs an <b>effort</b> (hours or times) and vice versa, exactly like on the website, with the same maximum per task.</li>
+                <li>Everything you do in Discord uses the same rules, rewards, penalties and raid damage as the website, and shows up there immediately.</li>
+                <li>If the server restricts QuestLife to one channel, the bot will tell you which one to use.</li>
+            </ul>
+        </section>
+
+        <!-- ===================== FAQ ===================== -->
+        <section id="faq" class="g-card help-section">
+            <h2>❓ FAQ &amp; troubleshooting</h2>
+
+            <details><summary>Why did I lose HP when I did nothing?</summary>
+                <p>A daily period ended without you completing it, or a to-do passed its deadline. The check runs automatically about every 10 minutes and again when you open the Dashboard, so you may see the notice later than the actual miss. If you were away for days, all the missed periods are counted when you return.</p></details>
+
+            <details><summary>My raid damage is 0 / my task did no damage. Why?</summary>
+                <p>You must press <b>Join</b> on the Raid page first. Damage is also not dealt once the boss is already defeated, and only tasks completed <i>after</i> joining count.</p></details>
+
+            <details><summary>I completed a to-do but I am not on the leaderboard.</summary>
+                <p>Only to-dos with a <b>category and effort</b> count. Habits, dailies and to-dos without a category earn rewards but are not ranked. Edit the task and choose a category before completing it (a completed task cannot be changed).</p></details>
+
+            <details><summary>Why is my streak 0 (no bonus)?</summary>
+                <p>The activity streak needs at least one completed to-do with a category on each consecutive day (in your time zone). Miss a day and it resets. Dailies have separate streaks shown by the 🔥 chip on each daily.</p></details>
+
+            <details><summary>I ticked the wrong task. Can I undo it?</summary>
+                <p>No, completions cannot be undone from the app. Be careful with the tick.</p></details>
+
+            <details><summary>What exactly do I lose if I die?</summary>
+                <p>Level and EXP (back to level 1), all gold, all equipment and bag items, all pets and eggs, and the coop and incubator levels. You keep achievements, titles, your tasks and your raid membership. Details in <a href="#rewards">Rewards &amp; penalties</a>.</p></details>
+
+            <details><summary>My dailies reset at the wrong time.</summary>
+                <p>Check your time zone in <i>Settings</i>. Dailies, deadlines and streaks follow it (the weekly leaderboards and the raid always follow Vietnam time).</p></details>
+
+            <details><summary>The shop says I cannot buy something.</summary>
+                <p>Either you do not have enough gold, or it is gear you already own. Eggs can be bought many times.</p></details>
+
+            <details><summary>My egg is ready but Hatch fails.</summary>
+                <p>The coop is probably full. Upgrade it on the Pets page, then hatch again.</p></details>
+
+            <details><summary>Discord says "Link your account first".</summary>
+                <p>Your Discord account is not connected yet (or you unlinked it). Get a code in <i>Settings → Link Discord</i> and run <code>/link</code>. If the code is "not valid", it has expired or was already used: generate a new one. After five wrong codes in ten minutes you must wait a little before trying again.</p></details>
+
+            <details><summary>Can I change my username or email, or reset my password?</summary>
+                <p>Not yet: there is no screen for these. Only the time zone can be changed in Settings.</p></details>
+
+            <details><summary>What does the number next to a task's stars mean?</summary>
+                <p>The stars are the difficulty (1 to 5). A coloured chip shows the category and effort, a clock chip shows the deadline, and the last chip shows the priority.</p></details>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // highlight the section you are reading in the contents list
+    (function () {
+        var links = document.querySelectorAll('.help-toc a');
+        if (!('IntersectionObserver' in window) || !links.length) return;
+        var byId = {};
+        links.forEach(function (a) { byId[a.dataset.target] = a; });
+        var obs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (!e.isIntersecting) return;
+                links.forEach(function (a) { a.classList.remove('active'); });
+                var a = byId[e.target.id];
+                if (a) { a.classList.add('active'); if (a.scrollIntoView && window.innerWidth < 992) a.scrollIntoView({ inline: 'center', block: 'nearest' }); }
+            });
+        }, { rootMargin: '-20% 0px -70% 0px' });
+        document.querySelectorAll('.help-section').forEach(function (s) { obs.observe(s); });
+    })();
+</script>
+}

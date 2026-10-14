@@ -11,7 +11,7 @@ namespace TodoApp.Controllers;
 [Authorize]
 public class DashboardController(
     AppDbContext db, LeaderboardService leaderboards, TaskService tasks, CharacterService characters, ActivityStatsService activityStats,
-    AchievementService achievements,
+    AchievementService achievements, TaskBoardService boards,
     RaidService raid, DataSourceMode mode) : GameControllerBase
 {
     public async Task<IActionResult> Index()
@@ -36,27 +36,7 @@ public class DashboardController(
         var streak = Gamification.Streak(logs.Select(l => l.LoggedAt), clock);
         var totals = logs.GroupBy(l => l.Category).ToDictionary(g => g.Key, g => g.Sum(l => l.Amount));
 
-        var all = await db.Tasks.AsNoTracking().Where(t => t.UserId == userId).OrderBy(t => t.CreatedAt).ToListAsync();
-        var today = clock.Today;
-
-        // habit counters and "done this period" flags come from the history tables
-        var habitIds = all.Where(t => t.Type == TaskType.Habit).Select(t => t.Id).ToList();
-        var habitCounts = (await db.HabitLogs.AsNoTracking().Where(h => habitIds.Contains(h.TaskId))
-                .GroupBy(h => new { h.TaskId, h.Positive }).Select(g => new { g.Key.TaskId, g.Key.Positive, N = g.Count() }).ToListAsync())
-            .GroupBy(x => x.TaskId)
-            .ToDictionary(g => g.Key, g => (g.Where(x => x.Positive).Sum(x => x.N), g.Where(x => !x.Positive).Sum(x => x.N)));
-
-        var dailies = all.Where(t => t.Type == TaskType.Daily).ToList();
-        var periodStarts = dailies.Select(t => Periods.Start(t.Repeat ?? RepeatType.Daily, today)).Distinct().ToList();
-        var dailyIds = dailies.Select(t => t.Id).ToList();
-        var completions = await db.DailyCompletions.AsNoTracking()
-            .Where(x => dailyIds.Contains(x.TaskId) && periodStarts.Contains(x.PeriodStart))
-            .Select(x => new { x.TaskId, x.PeriodStart }).ToListAsync();
-        var doneDailies = dailies
-            .Where(t => completions.Any(x => x.TaskId == t.Id && x.PeriodStart == Periods.Start(t.Repeat ?? RepeatType.Daily, today)))
-            .Select(t => t.Id).ToHashSet();
-
-        static int Pri(TaskItem t) => -(int)t.Priority;
+        var board = await boards.LoadAsync(userId, clock);
         var titleName = c.ActiveTitleId is { } tid && GameCatalog.Current.Titles.TryGetValue(tid, out var title) ? title.Name : null;
 
         return View(new DashboardViewModel
@@ -87,15 +67,13 @@ public class DashboardController(
             Recent = logs.Take(6).ToList(),
 
             Clock = clock,
-            Today = today,
-            HabitCounts = habitCounts,
-            DoneDailyIds = doneDailies,
-            Habits = all.Where(t => t.Type == TaskType.Habit).OrderBy(Pri).ThenBy(t => t.CreatedAt).ToList(),
-            Dailies = dailies.OrderBy(Pri).ThenBy(t => t.CreatedAt).ToList(),
-            Todos = all.Where(t => t.Type == TaskType.Todo && !t.IsDone)
-                .OrderBy(Pri).ThenBy(t => t.Deadline ?? DateOnly.MaxValue).ToList(),
-            DoneTodos = all.Where(t => t.Type == TaskType.Todo && t.IsDone)
-                .OrderByDescending(t => t.CompletedAt).Take(5).ToList(),
+            Today = board.Today,
+            HabitCounts = board.HabitCounts,
+            DoneDailyIds = board.DoneDailyIds,
+            Habits = board.Habits,
+            Dailies = board.Dailies,
+            Todos = board.Todos,
+            DoneTodos = board.DoneTodos,
         });
     }
 }

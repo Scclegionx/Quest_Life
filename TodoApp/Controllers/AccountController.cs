@@ -7,12 +7,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TodoApp.Data;
 using TodoApp.Models;
+using Microsoft.Extensions.Options;
 using TodoApp.Services;
+using TodoApp.Services.Discord;
 using TodoApp.ViewModels;
 
 namespace TodoApp.Controllers;
 
-public class AccountController(AppDbContext db, IPasswordHasher<User> hasher) : Controller
+public class AccountController(
+    AppDbContext db, IPasswordHasher<User> hasher, DiscordLinkService discord, IOptions<DiscordOptions> discordOptions) : Controller
 {
     [HttpGet, AllowAnonymous]
     public IActionResult Register() =>
@@ -82,17 +85,22 @@ public class AccountController(AppDbContext db, IPasswordHasher<User> hasher) : 
     [HttpGet, Authorize]
     public async Task<IActionResult> Settings()
     {
-        var zone = await db.Users.AsNoTracking().Where(u => u.Id == User.GetUserId()).Select(u => u.TimeZone).FirstOrDefaultAsync();
-        return View(new SettingsViewModel { TimeZone = zone ?? UserClock.DefaultZoneId });
+        var userId = User.GetUserId()!.Value;
+        var zone = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.TimeZone).FirstOrDefaultAsync();
+        return View(new SettingsViewModel { TimeZone = zone ?? UserClock.DefaultZoneId, Discord = await LoadDiscordStatusAsync(userId) });
     }
 
     [HttpPost, Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> Settings(SettingsViewModel model)
     {
-        if (!UserClock.IsValidZone(model.TimeZone)) ModelState.AddModelError(nameof(model.TimeZone), "Invalid time zone");
-        if (!ModelState.IsValid) return View(model);
-
         var userId = User.GetUserId()!.Value;
+        if (!UserClock.IsValidZone(model.TimeZone)) ModelState.AddModelError(nameof(model.TimeZone), "Invalid time zone");
+        if (!ModelState.IsValid)
+        {
+            model.Discord = await LoadDiscordStatusAsync(userId);
+            return View(model);
+        }
+
         var user = await db.Users.FirstAsync(u => u.Id == userId);
         user.TimeZone = model.TimeZone;
         await db.SaveChangesAsync();
@@ -100,6 +108,44 @@ public class AccountController(AppDbContext db, IPasswordHasher<User> hasher) : 
         await SignInAsync(user, isPersistent: true); // refresh the time zone claim
         TempData["Toast"] = "Time zone updated. Your new day now starts according to this time zone.";
         return RedirectToAction(nameof(Settings));
+    }
+
+    /// <summary>Creates a one-time code to paste into Discord with /link.</summary>
+    [HttpPost, Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DiscordCode()
+    {
+        if (!discordOptions.Value.IsConfigured)
+        {
+            TempData["ToastError"] = "Discord integration is not enabled on this server.";
+            return RedirectToAction(nameof(Settings));
+        }
+        await discord.CreateCodeAsync(User.GetUserId()!.Value);
+        return RedirectToAction(nameof(Settings));
+    }
+
+    [HttpPost, Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DiscordUnlink()
+    {
+        var removed = await discord.UnlinkByUserIdAsync(User.GetUserId()!.Value);
+        TempData["Toast"] = removed ? "Discord unlinked." : "Your account was not linked to Discord.";
+        return RedirectToAction(nameof(Settings));
+    }
+
+    private async Task<DiscordStatusViewModel> LoadDiscordStatusAsync(Guid userId)
+    {
+        var status = new DiscordStatusViewModel { Enabled = discordOptions.Value.IsConfigured };
+        if (!status.Enabled) return status;
+
+        var link = await discord.GetLinkAsync(userId);
+        status.Linked = link is not null;
+        status.DiscordName = link?.DiscordUsername;
+        status.LinkedAt = link?.LinkedAt;
+        if (link is null && await discord.GetActiveCodeAsync(userId) is { } code)
+        {
+            status.Code = DiscordLinkService.Format(code.Code);
+            status.CodeExpiresAt = code.ExpiresAt;
+        }
+        return status;
     }
 
     [AllowAnonymous]

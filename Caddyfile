@@ -1,0 +1,16 @@
+# Caddy terminates HTTPS (free certificates from Let's Encrypt, renewed automatically) and forwards to the app.
+# {$DOMAIN} comes from the DOMAIN variable in your .env file, for example questlife.example.com
+# Needs: DNS pointing at this server, and ports 80 and 443 open. See docs/deploy-aws-ec2.md, section 11.
+#
+# While debugging DNS/firewall problems you can add this block at the very top to use Let's Encrypt's test CA
+# (browsers will warn, but you can't get rate-limited). Remove it afterwards:
+#   {
+#       acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+#   }
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:8080
+
+	# Enable only once HTTPS works reliably (browsers will refuse plain http for a year afterwards):
+	# header Strict-Transport-Security "max-age=31536000"
+}

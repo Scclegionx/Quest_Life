@@ -49,6 +49,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<HabitLog> HabitLogs => Set<HabitLog>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
+    // discord
+    public DbSet<DiscordLink> DiscordLinks => Set<DiscordLink>();
+    public DbSet<DiscordLinkCode> DiscordLinkCodes => Set<DiscordLinkCode>();
+
     // raids
     public DbSet<Raid> Raids => Set<Raid>();
     public DbSet<RaidParticipant> RaidParticipants => Set<RaidParticipant>();
@@ -450,6 +454,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne<TaskItem>().WithMany().HasForeignKey(a => a.SourceTaskId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(a => new { a.Category, a.LoggedAt });
             e.HasIndex(a => new { a.UserId, a.LoggedAt });
+        });
+
+        // ---------- discord ----------
+        b.Entity<DiscordLink>(e =>
+        {
+            e.ToTable("discord_links");
+            e.HasKey(x => x.UserId);
+            e.Property(x => x.DiscordUserId).HasMaxLength(32).IsRequired();
+            e.Property(x => x.DiscordUsername).HasMaxLength(100);
+            e.HasIndex(x => x.DiscordUserId).IsUnique();
+            e.HasOne<User>().WithOne().HasForeignKey<DiscordLink>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<DiscordLinkCode>(e =>
+        {
+            e.ToTable("discord_link_codes");
+            e.HasKey(x => x.Code);
+            e.Property(x => x.Code).HasMaxLength(16);
+            e.HasIndex(x => x.UserId);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // ---------- raids ----------

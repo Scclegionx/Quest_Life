@@ -1,14 +1,24 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using TodoApp.Data;
 using TodoApp.Models;
 using TodoApp.Services;
+using TodoApp.Services.Discord;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+
+// Login cookies and anti-forgery tokens are protected with keys. In Docker the default key location is lost whenever the
+// container is recreated (everybody would be logged out after each deploy), so production keeps them on a mounted volume.
+var dataProtectionPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionPath))
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
+        .SetApplicationName("QuestLife");
 AppTime.Offset = TimeSpan.FromHours(builder.Configuration.GetValue("GameTimeZoneOffsetHours", 7.0));
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -31,12 +41,21 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<CharacterService>();
 builder.Services.AddScoped<TaskService>();
+builder.Services.AddScoped<TaskBoardService>();
 builder.Services.AddScoped<RaidService>();
 builder.Services.AddScoped<LeaderboardService>();
 builder.Services.AddScoped<ActivityStatsService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<AchievementService>();
 builder.Services.AddHostedService<PenaltySweeper>();
+
+// Discord slash-command integration (see docs/discord-setup.md)
+builder.Services.Configure<DiscordOptions>(builder.Configuration.GetSection("Discord"));
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<DiscordSignatureVerifier>();
+builder.Services.AddSingleton<DiscordCommandRegistrar>();
+builder.Services.AddScoped<DiscordLinkService>();
+builder.Services.AddScoped<DiscordInteractionHandler>();
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -58,6 +77,13 @@ using (var scope = app.Services.CreateScope())
     else await db.Database.EnsureCreatedAsync();
 
     await GameCatalog.ReloadAsync(db);
+
+    var discordOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<DiscordOptions>>().Value;
+    if (discordOptions.IsConfigured && discordOptions.RegisterCommandsOnStartup)
+    {
+        using var registerTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        await app.Services.GetRequiredService<DiscordCommandRegistrar>().RegisterAsync(registerTimeout.Token);
+    }
 
     if (dataMode == DataSourceMode.Mock || builder.Configuration.GetValue<bool>("DemoData:Enabled"))
         await DemoDataSeeder.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>(),

@@ -1,4 +1,12 @@
-bin/
-obj/
-.env
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
 .git
+.gitignore
+.env
+.env.*
+docs/
+Caddyfile
+docker-compose*.yml
+Dockerfile

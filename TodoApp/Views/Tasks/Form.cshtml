@@ -5,7 +5,7 @@
     ViewData["Title"] = (editing ? "Edit " : "Add ") + typeName.ToLowerInvariant();
     var typeIcon = Model.Type switch { TaskType.Habit => "🔁", TaskType.Daily => "📅", _ => "📌" };
     var catData = Categories.All.ToDictionary(c => c.Key.ToString(),
-        c => new { c.Unit, c.IsHours, Max = c.MaxPerEntry, c.Emoji });
+        c => new { unit = c.Unit, isHours = c.IsHours, max = c.MaxPerEntry, emoji = c.Emoji });
 }
 
 <div class="auth-card g-card" style="max-width:620px">
@@ -123,7 +123,7 @@
 
         function renderPreview() {
             const d = +diff.value, c = cat && cat.value ? cats[cat.value] : null;
-            const unit = c ? ' per ' + c.Unit.replace(/s$/, '') : '';
+            const unit = c ? ' per ' + c.unit.replace(/s$/, '') : '';
             preview.innerHTML = 'Base reward' + unit + ': <b>+' + gold[d] + ' 🪙</b> · <b>+' + exp[d] + ' EXP</b> · ' +
                 '<b>⚔️ ' + dmg[d] + '</b> boss damage (if you joined the raid)' + ' · on a miss: <b>-' + loss[d] + ' ❤️</b>';
         }
@@ -132,10 +132,10 @@
             const c = cat.value ? cats[cat.value] : null;
             effortGroup.style.display = c ? '' : 'none';
             if (!c) { effort.value = ''; return; }
-            effortLabel.textContent = 'Number of ' + c.Unit;
-            effort.step = c.IsHours ? '0.25' : '1';
-            effort.max = c.Max;
-            effort.min = c.IsHours ? '0.25' : '1';
+            effortLabel.textContent = 'Number of ' + c.unit;
+            effort.step = c.isHours ? '0.25' : '1';
+            effort.max = c.max;
+            effort.min = c.isHours ? '0.25' : '1';
         }
         diff.addEventListener('change', renderPreview);
         if (cat) cat.addEventListener('change', () => { renderEffort(); renderPreview(); });

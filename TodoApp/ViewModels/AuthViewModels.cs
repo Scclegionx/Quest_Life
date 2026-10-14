@@ -47,8 +47,20 @@ public class LoginViewModel
     public bool RememberMe { get; set; }
 }
 
+public class DiscordStatusViewModel
+{
+    public bool Enabled { get; set; }
+    public bool Linked { get; set; }
+    public string? DiscordName { get; set; }
+    public DateTime? LinkedAt { get; set; }
+    public string? Code { get; set; }
+    public DateTime? CodeExpiresAt { get; set; }
+}
+
 public class SettingsViewModel
 {
+    public DiscordStatusViewModel Discord { get; set; } = new();
+
     [Required]
     [Display(Name = "Time zone")]
     public string TimeZone { get; set; } = TodoApp.Services.UserClock.DefaultZoneId;

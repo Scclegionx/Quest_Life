@@ -71,18 +71,7 @@ public class TasksController(TaskService tasks) : GameControllerBase
 
     private void Validate(TaskFormViewModel f)
     {
-        if (f.Type == TaskType.Daily && f.Repeat is null)
-            ModelState.AddModelError(nameof(f.Repeat), "Please choose how often it repeats");
-
-        if (f.Type == TaskType.Todo && f.Category is { } cat)
-        {
-            var info = Categories.Get(cat);
-            if (f.Effort is null or <= 0)
-                ModelState.AddModelError(nameof(f.Effort), $"Please enter the number of {info.Unit}");
-            else if (f.Effort > info.MaxPerEntry)
-                ModelState.AddModelError(nameof(f.Effort), $"At most {info.MaxPerEntry.Num()} {info.Unit} per task");
-            else
-                f.Effort = info.IsHours ? Math.Round(f.Effort.Value, 2) : Math.Round(f.Effort.Value, 0);
-        }
+        foreach (var (field, message) in TaskFormValidator.Validate(f))
+            ModelState.AddModelError(field, message);
     }
 }

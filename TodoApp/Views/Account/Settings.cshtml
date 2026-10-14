@@ -33,4 +33,71 @@
     </form>
 </div>
 
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+
+<div class="auth-card g-card" style="margin-top:1.2rem">
+    <div class="text-center mb-3">
+        <div style="font-size:2.5rem">💬</div>
+        <h2 class="mb-1">Link Discord</h2>
+        <small class="muted">Manage your quests from a Discord channel with slash commands</small>
+    </div>
+
+    @if (!Model.Discord.Enabled)
+    {
+        <div class="muted text-center">Discord integration is not enabled on this server.</div>
+    }
+    else if (Model.Discord.Linked)
+    {
+        <div class="callout tip text-center mb-3">
+            ✅ Linked to <b>@(string.IsNullOrWhiteSpace(Model.Discord.DiscordName) ? "your Discord account" : Model.Discord.DiscordName)</b>
+            @if (Model.Discord.LinkedAt is { } linkedAt)
+            {
+                <div class="small muted">since @(User.GetClock().ToLocal(linkedAt).ToString("MMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture))</div>
+            }
+        </div>
+        <p class="muted small">In your Discord channel try <code>/quests</code>, <code>/me</code> or <code>/help</code>.</p>
+        <form asp-action="DiscordUnlink" method="post" onsubmit="return confirm('Unlink your Discord account?')">
+            <button type="submit" class="btn btn-ghost w-100">Unlink Discord</button>
+        </form>
+    }
+    else
+    {
+        @if (Model.Discord.Code is { } code && Model.Discord.CodeExpiresAt is { } expires)
+        {
+            <p class="mb-2">Your link code:</p>
+            <div class="link-code" id="link-code" title="Click to copy">@code</div>
+            <div class="text-center mt-2 mb-3">
+                <button type="button" class="btn-small" id="copy-code" data-code="@code.Replace("-", "")">📋 Copy code</button>
+                <span class="muted small d-block mt-2">Valid until @(User.GetClock().ToLocal(expires).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)) (10 minutes), one use only.</span>
+            </div>
+            <ol class="small muted ps-3">
+                <li>Open your Discord server and go to the QuestLife channel.</li>
+                <li>Type <code>/link</code>, choose it, and paste the code in the <b>code</b> box.</li>
+                <li>Press Enter. You will get a green “Linked!” message that only you can see.</li>
+            </ol>
+            <form asp-action="DiscordCode" method="post"><button type="submit" class="btn btn-ghost w-100">Generate a new code</button></form>
+        }
+        else
+        {
+            <p class="muted small">Get a one-time code here, then paste it into Discord with the <code>/link</code> command. This connects your Discord account to this QuestLife account. You only do it once.</p>
+            <form asp-action="DiscordCode" method="post"><button type="submit" class="btn btn-game w-100">Get a link code</button></form>
+        }
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var btn = document.getElementById('copy-code');
+            if (!btn) return;
+            function copy() {
+                var code = btn.dataset.code;
+                var done = function () { btn.textContent = '✅ Copied'; setTimeout(function () { btn.textContent = '📋 Copy code'; }, 1800); };
+                if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done);
+                else { var t = document.createElement('textarea'); t.value = code; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
+            }
+            btn.addEventListener('click', copy);
+            var big = document.getElementById('link-code'); if (big) big.addEventListener('click', copy);
+        })();
+    </script>
+}

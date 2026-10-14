@@ -113,6 +113,17 @@
         <div class="page">&copy; 2026 QuestLife · Turn your life into a game</div>
     </footer>
 
+    @if (!string.Equals(ctrl, "Help", StringComparison.OrdinalIgnoreCase))
+    {
+        <a class="help-fab" asp-controller="Help" asp-action="Index" aria-label="Open the guide" title="Guide: how QuestLife works">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5"></path>
+                <circle cx="12" cy="18" r=".6" fill="currentColor"></circle>
+            </svg>
+        </a>
+    }
+
     <!-- install suggestion (shown by pwa.js only when the app can be installed) -->
     <div id="install-banner" class="install-banner" hidden>
         <span class="ib-icon">⚔️</span>

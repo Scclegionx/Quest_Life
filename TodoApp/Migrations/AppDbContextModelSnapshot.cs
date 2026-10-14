@@ -17,7 +17,7 @@ namespace TodoApp.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.20")
+                .HasAnnotation("ProductVersion", "9.0.21")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -1238,6 +1238,61 @@ namespace TodoApp.Migrations
                             BaseHpLoss = 18,
                             Name = "Extreme"
                         });
+                });
+
+            modelBuilder.Entity("TodoApp.Models.DiscordLink", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("DiscordUserId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("discord_user_id");
+
+                    b.Property<string>("DiscordUsername")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("discord_username");
+
+                    b.Property<DateTime>("LinkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("linked_at");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("DiscordUserId")
+                        .IsUnique();
+
+                    b.ToTable("discord_links", (string)null);
+                });
+
+            modelBuilder.Entity("TodoApp.Models.DiscordLinkCode", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("discord_link_codes", (string)null);
                 });
 
             modelBuilder.Entity("TodoApp.Models.EggTypeEntity", b =>
@@ -3943,6 +3998,24 @@ namespace TodoApp.Migrations
                     b.HasOne("TodoApp.Models.TaskItem", null)
                         .WithMany()
                         .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TodoApp.Models.DiscordLink", b =>
+                {
+                    b.HasOne("TodoApp.Models.User", null)
+                        .WithOne()
+                        .HasForeignKey("TodoApp.Models.DiscordLink", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TodoApp.Models.DiscordLinkCode", b =>
+                {
+                    b.HasOne("TodoApp.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
